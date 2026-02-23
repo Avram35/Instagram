@@ -1,7 +1,31 @@
 import logo from "./logo.png";
+import menu from "./menu.png";
+import menu1 from "./menu1.png";
+import heart from "./heart.png";
+import heart1 from "./heart1.png";
+import plus from "./plus.png";
+import plus1 from "./plus1.png";
+import home from "./home.png";
+import home1 from "./home1.png";
+import search from "./search.png";
+import search1 from "./search1.png";
+import noProfilePic from "./noprofilepic.jpg";
+import remove from "./remove.png";
 
 export const assets = {
   logo,
+  menu,
+  menu1,
+  heart,
+  heart1,
+  plus,
+  plus1,
+  home,
+  home1,
+  search,
+  search1,
+  noProfilePic,
+  remove,
 };
 
 export const mockUsers = [
