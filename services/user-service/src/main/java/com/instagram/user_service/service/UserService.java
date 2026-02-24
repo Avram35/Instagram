@@ -79,7 +79,6 @@ public class UserService {
 
     public void updateUser(Long id, UserDto userDto) 
     {
-         log.info("Updating user with id: {}", id);
         User existing = userRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Корисник није пронађен."));
 
@@ -101,6 +100,15 @@ public class UserService {
             .map(this::toDto)
             .collect(Collectors.toList());
     }
+
+    public List<UserDto> getAllUsers() 
+    {
+        return userRepository.findAll()
+            .stream()
+            .map(this::toDto)
+            .collect(Collectors.toList());
+    }
+
     private UserDto toDto(User user) {
         return UserDto.builder()
                 .id(user.getId())

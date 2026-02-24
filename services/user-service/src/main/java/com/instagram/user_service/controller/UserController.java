@@ -54,6 +54,13 @@ public class UserController {
         return ResponseEntity.ok(results);
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<UserDto>> getAllUsers() 
+    {
+        return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+
     @PutMapping("/{id}")
     public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody UserDto userDto) 
     {   
