@@ -11,20 +11,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SignUpRequest {
 
-    @NotBlank(message = "Username is required.")
+    @NotBlank(message = "Корисничко име је обавезно.")
     private String username;
 
-    @NotBlank(message = "Email is required.")
-    @Email(message = "Email is not valid.")
+    @NotBlank(message = "Email је обавезан.")
+    @Email(message = "Email није исправан.")
     private String email;
 
-    @NotBlank(message = "First name is required.")
+    @NotBlank(message = "Име је обавезно.")
     private String fname;
 
-    @NotBlank(message = "Last name is required.")
+    @NotBlank(message = "Презиме је обавезно.")
     private String lname;
 
-    @NotBlank(message = "Password is required.")
+    @NotBlank(message = "Шифра је обавезна.")
     private String password;
 
 }

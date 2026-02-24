@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SignInRequest {
 
-    @NotBlank(message = "Username or email is required.")
+    @NotBlank(message = "Корисничко име или email је обавезан.")
     private String usernameOrEmail;
 
-    @NotBlank(message = "Password is required.")
+    @NotBlank(message = "Шифра је обавезна.")
     private String password;
 
 }
