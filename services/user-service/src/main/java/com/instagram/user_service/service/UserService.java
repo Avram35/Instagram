@@ -1,9 +1,15 @@
 package com.instagram.user_service.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.instagram.user_service.dto.UserDto;
 import com.instagram.user_service.entity.User;
@@ -15,11 +21,16 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
+    @Value("${internal.api.key}")
+    private String internalApiKey;
 
-    public UserService(UserRepository userRepository) 
+    private final UserRepository userRepository;
+    private final RestTemplate restTemplate;
+
+    public UserService(UserRepository userRepository, RestTemplate restTemplate) 
     {
         this.userRepository = userRepository;
+        this.restTemplate = restTemplate;
     }
     
     public UserDto createUser(UserDto input)
@@ -82,6 +93,11 @@ public class UserService {
         User existing = userRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Корисник није пронађен."));
 
+        boolean wasPrivate = existing.getPrivateProfile() != null && existing.getPrivateProfile();
+        boolean nowPublic = userDto.getPrivateProfile() != null && !userDto.getPrivateProfile();
+
+        String oldUsername = existing.getUsername();
+
         if (userDto.getUsername() != null) existing.setUsername(userDto.getUsername());
         if (userDto.getFname() != null) existing.setFname(userDto.getFname());
         if (userDto.getLname() != null) existing.setLname(userDto.getLname());
@@ -90,6 +106,47 @@ public class UserService {
         if (userDto.getPrivateProfile() != null) existing.setPrivateProfile(userDto.getPrivateProfile());
 
         userRepository.save(existing);
+
+        if (userDto.getUsername() != null && !userDto.getUsername().equals(oldUsername)) 
+        {
+        syncUsernameWithAuth(oldUsername, userDto.getUsername());
+        }
+
+        if (wasPrivate && nowPublic) 
+        {
+            acceptAllPendingRequests(id);
+        }
+    }
+
+    private void syncUsernameWithAuth(String oldUsername, String newUsername) 
+    {
+        try {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Api-Key", internalApiKey);
+        headers.set("Content-Type", "application/json");
+
+        Map<String, String> body = Map.of("oldUsername", oldUsername, "newUsername", newUsername);
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+
+            restTemplate.exchange(
+                "http://auth-service:8081/api/v1/auth/internal/update-username",
+                HttpMethod.PUT,
+                entity,
+                Void.class
+            );
+        } catch (Exception e) {}
+    }
+
+    private void acceptAllPendingRequests(Long userId) 
+    {
+        try {
+            restTemplate.postForObject(
+                "http://follow-service:8083/api/v1/follow/requests/accept-all/" + userId,
+                null,
+                Void.class
+            );
+        } catch (Exception e) {
+        }
     }
 
     public List<UserDto> searchUsers(String query) 
