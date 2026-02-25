@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -127,6 +128,25 @@ public class AuthenticationController {
             .body(Map.of("message", "Успешно сте се регистровали!"));
     }
 
+    @PutMapping("/internal/update-username")
+    public ResponseEntity<?> updateUsername(@RequestBody Map<String, String> request, @RequestHeader("X-Internal-Api-Key") String apiKey) 
+    {
+        if (!internalApiKey.equals(apiKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Неважећи кључ."));
+        }
+
+        String oldUsername = request.get("oldUsername");
+        String newUsername = request.get("newUsername");
+
+        User user = userRepository.findByUsernameOrEmail(oldUsername, oldUsername)
+            .orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+
+        user.setUsername(newUsername);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Username ажуриран."));
+    }
+    
     @DeleteMapping("/delete")
     public ResponseEntity<?> deleteAccount(@RequestHeader("Authorization") String authHeader) {
         try {
