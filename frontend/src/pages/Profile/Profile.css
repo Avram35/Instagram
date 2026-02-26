@@ -1,0 +1,98 @@
+.profile_div {
+  margin-left: 200px;
+  padding: 50px;
+}
+.profile_info_div {
+  display: flex;
+  gap: 30px;
+  width: 100%;
+}
+.profile_info_div img {
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.profile_info {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+.profile_top {
+  width: 500px;
+  margin: auto;
+}
+.username {
+  font-size: 22px;
+  font-weight: 700;
+}
+.name {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+.followers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 300;
+  width: 250px;
+}
+.followers span .number {
+  font-size: 13px;
+  font-weight: 600;
+}
+.bio {
+  font-size: 13px;
+  font-weight: 400;
+}
+.follow_button {
+  width: 100%;
+  background-color: #405de6;
+  border: none;
+  padding: 10px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+.edit_profile_button {
+  width: 100%;
+  background-color: #ededed;
+  border: none;
+  padding: 10px;
+  color: black;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+.profile_bottom {
+  width: 900px;
+  margin: auto;
+  margin-top: 50px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+.profile_bottom img {
+  width: 100%;
+  object-fit: cover;
+  height: 300px;
+  cursor: pointer;
+}
+.overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+}
+.profile-privacy {
+  text-align: center;
+  margin-top: 30px;
+}
