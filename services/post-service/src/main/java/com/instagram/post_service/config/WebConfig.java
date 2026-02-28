@@ -1,0 +1,14 @@
+package com.instagram.post_service.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:/app/uploads/");
+    }
+} //ovaj deo koda omogucava cuvanje slika u folderu uploads i pristup tim slikama preko URL-a /uploads/{filename}
