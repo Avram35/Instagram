@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -46,6 +47,24 @@ public class FollowService {
     */
     @Transactional
     public Map<String, String> follow(Long followerId, Long followingId) {
+        // Провери да ли постоји блок у било ком смеру
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(
+                "http://blok-service:8084/api/v1/block/check-either/" + followerId + "/" + followingId,
+                Map.class
+            );
+            Boolean blocked = (Boolean) response.getBody().get("blocked");
+            if (Boolean.TRUE.equals(blocked)) {
+                throw new IllegalStateException("Не можете запратити овог корисника.");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            // Block сервис није доступан — дозволи праћење
+            log.warn("Блок сервис није доступан: {}", e.getMessage());
+        }
+                    
+        
         // Не може да прати сам себе
         if (followerId.equals(followingId)) {
             throw new IllegalArgumentException("Не можете пратити сами себе.");
@@ -156,6 +175,22 @@ public class FollowService {
 
         request.setStatus(RequestStatus.REJECTED);
         followRequestRepository.save(request);
+    }
+
+    @Transactional
+    public void acceptAllPendingRequests(Long userId) {
+        List<FollowRequest> pending = followRequestRepository.findByReceiverIdAndStatus(userId, RequestStatus.PENDING);
+        for (FollowRequest req : pending) {
+            req.setStatus(RequestStatus.ACCEPTED);
+            followRequestRepository.save(req);
+            
+            Follow follow = Follow.builder()
+                .followerId(req.getSenderId())
+                .followingId(req.getReceiverId())
+                .createdAt(LocalDateTime.now())
+                .build();
+            followRepository.save(follow);
+        }
     }
 
     /*

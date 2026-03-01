@@ -47,10 +47,13 @@ public class WebSecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
                 // GET ендпоинти за бројеве и листе — јавни
                 .requestMatchers(HttpMethod.GET, "/api/v1/follow/*/count").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/follow/*/followers").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/follow/*/following").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/follow/internal/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/follow/requests/accept-all/**").permitAll()
                 // Све остало захтева JWT
                 .anyRequest().authenticated()
             );
