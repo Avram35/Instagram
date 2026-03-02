@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import "./Navbar.css";
 import { assets } from "../../assets/assets";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ const Navbar = ({
   setMorePanel,
   panRef,
   morePanRef,
+  setCreatePost,
 }) => {
   const [active, setActive] = useState("pocetak");
   const navigate = useNavigate();
@@ -138,11 +139,6 @@ const Navbar = ({
                       : ""
                   : "pretraga";
               });
-              /*if (active === "pretraga") {
-                setActive(isFeed ? "pocetak" : isProfile ? "profil" : "");
-              } else {
-                setActive("pretraga");
-              }*/
 
               if (searchNotification === "pretraga") {
                 setSearchNotification(null);
@@ -178,11 +174,6 @@ const Navbar = ({
                       : ""
                   : "obavestenja",
               );
-              /*if (active === "obavestenja") {
-                setActive(isFeed ? "pocetak" : isProfile ? "profil" : "");
-              } else {
-                setActive("obavestenja");
-              }*/
 
               if (searchNotification === "obavestenja") {
                 setSearchNotification(null);
@@ -208,6 +199,7 @@ const Navbar = ({
               setActive("objavi");
               setSearchNotification(null);
               setMorePanel(false);
+              setCreatePost(true);
             }}
           >
             <img
@@ -232,15 +224,7 @@ const Navbar = ({
             <div
               className={`img_wrapper ${active === "profil" ? "active" : ""}`}
             >
-              <img
-                //src={
-                //  user.profilePic === "" ? assets.noProfilePic : user.profilePic
-                //}
-                src={assets.noProfilePic}
-                alt=""
-                className="profile_pic"
-                //style={active === "profil" ? { border: "2px solid black" } : {}}
-              />
+              <img src={assets.noProfilePic} alt="" className="profile_pic" />
             </div>
 
             <span>Профил</span>

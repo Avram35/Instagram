@@ -2,17 +2,25 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import "./Profile.css";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { assets } from "../../assets/assets";
+
+import SinglePost from "../../components/SinglePost/SinglePost";
 import { AppContext } from "../../context/AppContext";
 
 const USER_API_URL = "http://localhost:8082/api/v1/user";
 const FOLLOW_API_URL = "http://localhost:8083/api/v1/follow";
+const POST_API_URL = "http://localhost:8086/api/v1/post";
 
 const Profile = () => {
   const { username } = useParams();
   const [profileInfo, setProfileInfo] = useState(null);
+  const [singlePost, setSinglePost] = useState(false);
+  const singlePostRef = useRef(null);
+  const [postId, setPostId] = useState();
   const { user } = useContext(AppContext);
   const navigate = useNavigate();
   const [followCount, setFollowCount] = useState(null);
+  const [posts, setPosts] = useState(null);
+  const [postInfo, setPostInfo] = useState(null);
 
   const fetchProfileInfo = async () => {
     try {
@@ -46,6 +54,20 @@ const Profile = () => {
     }
   };
 
+  const fetchPosts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${POST_API_URL}/user/${profileInfo.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      setPosts(data);
+    } catch (error) {
+      console.error("Error fetching posts: ", error);
+    }
+  };
+
   useEffect(() => {
     fetchProfileInfo();
   }, [username]);
@@ -54,7 +76,30 @@ const Profile = () => {
     if (profileInfo) {
       fetchFollowCount();
     }
+    if (profileInfo) {
+      fetchPosts();
+    }
   }, [profileInfo]);
+
+  useEffect(() => {
+    console.log(posts);
+  }, [posts]);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (singlePost) {
+        if (!singlePostRef.current.contains(e.target)) {
+          setSinglePost(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [singlePost]);
 
   return (
     <div>
@@ -104,14 +149,64 @@ const Profile = () => {
             )}
           </div>
 
-          <h2 className="profile-privacy">
-            {profileInfo.privateProfile
-              ? "Налог је приватан"
-              : "Налог је јаван"}
-          </h2>
+          {user.username === username ? (
+            posts && posts.length > 0 ? (
+              <div className="profile_bottom">
+                {posts.map((post, index) => (
+                  <img
+                    src={`http://localhost:8086${post.media[0].mediaUrl}`}
+                    key={index}
+                    onClick={() => {
+                      setSinglePost(true);
+                      setPostInfo(post);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="no_pictures_div">
+                <img src={assets.instagramPhoto} alt="" />
+                <h2>Поделите фотографије</h2>
+                <p>Кад поделите фотографије, приказаће се на вашем профилу.</p>
+              </div>
+            )
+          ) : profileInfo.privateProfile ? (
+            <div className="no_pictures_div">
+              <img src={assets.instagramPhoto} alt="" />
+              <h2>Овај налог је приватан</h2>
+              <p>
+                Пратите овај налог да бисте видели фотографије и видео запусе.
+              </p>
+            </div>
+          ) : posts && posts.length > 0 ? (
+            <div className="profile_bottom">
+              {posts.map((post, index) => (
+                <img
+                  src={`http://localhost:8086${post.media[0].mediaUrl}`}
+                  key={index}
+                  onClick={() => {
+                    setSinglePost(true);
+                    setPostInfo(post);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="no_pictures_yet_div">
+              <img src={assets.instagramPhoto} alt="" />
+              <h2>Још нема објава</h2>
+            </div>
+          )}
         </div>
       ) : (
         <h1>Loading...</h1>
+      )}
+      {singlePost ? (
+        <div className="overlay">
+          <SinglePost singlePostRef={singlePostRef} postInfo={postInfo} />
+        </div>
+      ) : (
+        ""
       )}
     </div>
   );

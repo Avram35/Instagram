@@ -1,0 +1,149 @@
+.single_post {
+  width: 60vw;
+  height: 80vh;
+  background-color: white;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  border-radius: 5px;
+}
+.single_post_img {
+  height: 100%;
+  width: 55%;
+  object-fit: cover;
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 5px;
+  flex-shrink: 0;
+}
+.single_post_profile {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.single_post_profile img {
+  width: 30px;
+  border-radius: 50%;
+}
+.single_post_profile span {
+  font-size: 12px;
+  font-weight: 500;
+}
+.single_post_profile_comment {
+  display: flex;
+
+  gap: 15px;
+}
+.single_post_profile_comment img {
+  width: 30px;
+  border-radius: 50%;
+}
+.single_post_username {
+  margin-right: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.8);
+}
+.single_post_comment {
+  font-size: 12px;
+  font-weight: 400;
+}
+.right_side {
+  display: flex;
+  flex-direction: column;
+
+  padding-bottom: 0;
+  flex: 1;
+}
+.comments {
+  flex: 1;
+  border-bottom: 1px solid #ededed;
+}
+.input_comments {
+  padding: 10px 10px;
+  border-top: 1px solid #ededed;
+}
+.input_comments input {
+  width: 100%;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+.likes {
+  padding: 10px;
+}
+.comments {
+  padding: 10px;
+}
+.like_comm {
+  display: flex;
+  gap: 15px;
+  padding-left: 5px;
+}
+.like_comm img {
+  width: 20px;
+  cursor: pointer;
+}
+.created_at_div {
+  padding-left: 5px;
+}
+.created_at {
+  font-size: 11px;
+  color: gray;
+}
+.like_counts_div {
+  padding-left: 5px;
+}
+.like_counts {
+  font-size: 12px;
+}
+.single_post_img_wrapper {
+  position: relative;
+  width: 55%;
+  height: 100%;
+  flex-shrink: 0;
+}
+.single_post_img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 5px;
+}
+.carousel_btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel_btn img {
+  width: 16px;
+  height: 16px;
+}
+.carousel_btn_left {
+  left: 10px;
+}
+.carousel_btn_right {
+  right: 10px;
+}
+.right_side_top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ededed;
+}
+.img_more {
+  width: 16px;
+  height: auto;
+  cursor: pointer;
+}
