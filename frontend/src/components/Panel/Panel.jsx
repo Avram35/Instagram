@@ -3,7 +3,7 @@ import "./Panel.css";
 import Search from "../Search/Search";
 import Notification from "../Notification/Notification";
 
-const Panel = ({ searchNotification, panRef }) => {
+const Panel = ({ searchNotification, panRef, setSearchNotification }) => {
   return (
     <div
       id="panel"
@@ -16,9 +16,9 @@ const Panel = ({ searchNotification, panRef }) => {
       }`}
     >
       {searchNotification === "pretraga" ? (
-        <Search />
+        <Search setSearchNotification={setSearchNotification} />
       ) : searchNotification === "obavestenja" ? (
-        <Notification />
+        <Notification setSearchNotification={setSearchNotification} />
       ) : (
         ""
       )}

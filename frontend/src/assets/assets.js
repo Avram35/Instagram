@@ -18,6 +18,7 @@ import back from "./arrow.png";
 import chat from "./chat.png";
 import instagramPhoto from "./instagram_photo.png";
 import more from "./more.png";
+import close from "./close.png";
 
 export const assets = {
   logo,
@@ -40,4 +41,5 @@ export const assets = {
   chat,
   instagramPhoto,
   more,
+  close,
 };

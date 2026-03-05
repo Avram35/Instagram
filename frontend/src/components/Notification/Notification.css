@@ -5,4 +5,11 @@
 }
 .notification_div h1 {
   font-size: 24px;
+  margin-bottom: 20px;
+}
+.no_notifications {
+  text-align: left;
+  color: #999;
+  margin-top: 20px;
+  font-size: 14px;
 }

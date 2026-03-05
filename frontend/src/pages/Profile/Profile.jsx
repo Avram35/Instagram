@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import "./Profile.css";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { assets } from "../../assets/assets";
 
 import SinglePost from "../../components/SinglePost/SinglePost";
 import { AppContext } from "../../context/AppContext";
+import FollowersModal from "../../components/FollowersModal/FollowersModal";
 
 const USER_API_URL = "http://localhost:8082/api/v1/user";
 const FOLLOW_API_URL = "http://localhost:8083/api/v1/follow";
@@ -20,17 +21,20 @@ const Profile = () => {
   const navigate = useNavigate();
   const [followCount, setFollowCount] = useState(null);
   const [posts, setPosts] = useState(null);
+  const [postCount, setPostCount] = useState(0);
   const [postInfo, setPostInfo] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [followersModal, setFollowersModal] = useState(false);
+  const followersModalRef = useRef(null);
+  const [followersFollowing, setFollowersFollowing] = useState(null);
 
   const fetchProfileInfo = async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${USER_API_URL}/${username}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await response.json();
       setProfileInfo(data);
     } catch (error) {
@@ -60,11 +64,81 @@ const Profile = () => {
       const response = await fetch(`${POST_API_URL}/user/${profileInfo.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await response.json();
       setPosts(data);
     } catch (error) {
       console.error("Error fetching posts: ", error);
+    }
+  };
+
+  const fetchPostCount = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${POST_API_URL}/count/${profileInfo.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      setPostCount(data.count ?? 0);
+    } catch (error) {
+      console.error("Error fetching post count:", error);
+    }
+  };
+
+  const checkFollow = async () => {
+    if (!profileInfo?.id) return;
+    try {
+      const token = localStorage.getItem("token");
+
+      const [followRes, pendingRes] = await Promise.all([
+        fetch(`${FOLLOW_API_URL}/check/${profileInfo.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${FOLLOW_API_URL}/requests/check/${profileInfo.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const followData = await followRes.json();
+      const pendingData = await pendingRes.json();
+
+      setIsFollowing(followData.following);
+      setIsPending(pendingData.pending);
+    } catch (error) {
+      console.error("Error checking follow:", error);
+    }
+  };
+
+  const handleFollow = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const method = isFollowing || isPending ? "DELETE" : "POST";
+
+      const response = await fetch(`${FOLLOW_API_URL}/${profileInfo.id}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+
+      if (method === "DELETE") {
+        setIsFollowing(false);
+        setIsPending(false);
+      } else {
+        if (
+          data.message?.includes("захтев") ||
+          data.message?.includes("послат")
+        ) {
+          setIsPending(true);
+          setIsFollowing(false);
+        } else {
+          setIsFollowing(true);
+          setIsPending(false);
+        }
+      }
+
+      fetchFollowCount();
+    } catch (error) {
+      console.error("Error following/unfollowing:", error);
     }
   };
 
@@ -73,33 +147,27 @@ const Profile = () => {
   }, [username]);
 
   useEffect(() => {
-    if (profileInfo) {
-      fetchFollowCount();
-    }
-    if (profileInfo) {
-      fetchPosts();
+    if (!profileInfo) return;
+    fetchFollowCount();
+    fetchPosts();
+    fetchPostCount();
+    if (user.username !== username) {
+      checkFollow();
     }
   }, [profileInfo]);
 
   useEffect(() => {
-    console.log(posts);
-  }, [posts]);
-
-  useEffect(() => {
     const handleClick = (e) => {
-      if (singlePost) {
-        if (!singlePostRef.current.contains(e.target)) {
-          setSinglePost(false);
-        }
+      if (singlePost && !singlePostRef.current.contains(e.target)) {
+        setSinglePost(false);
+      }
+      if (followersModal && !followersModalRef.current.contains(e.target)) {
+        setFollowersModal(false);
       }
     };
-
     document.addEventListener("mousedown", handleClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-    };
-  }, [singlePost]);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [singlePost, followersModal]);
 
   return (
     <div>
@@ -118,15 +186,39 @@ const Profile = () => {
                 </span>
                 <div className="followers">
                   <span>
-                    <span className="number">0</span> објава
+                    <span className="number">{postCount}</span> објава
                   </span>
-                  <span>
+                  <span
+                    onClick={() => {
+                      if (
+                        profileInfo.privateProfile &&
+                        !isFollowing &&
+                        user.username !== username
+                      )
+                        return;
+                      setFollowersModal(true);
+                      setFollowersFollowing("Пратиоци");
+                    }}
+                    className="span_followers_count"
+                  >
                     <span className="number">
                       {followCount?.followersCount ?? 0}
                     </span>{" "}
                     пратилаца
                   </span>
-                  <span>
+                  <span
+                    onClick={() => {
+                      if (
+                        profileInfo.privateProfile &&
+                        !isFollowing &&
+                        user.username !== username
+                      )
+                        return;
+                      setFollowersModal(true);
+                      setFollowersFollowing("Пратите");
+                    }}
+                    className="span_followers_count"
+                  >
                     <span className="number">
                       {followCount?.followingCount ?? 0}
                     </span>{" "}
@@ -145,7 +237,20 @@ const Profile = () => {
                 Измените профил
               </button>
             ) : (
-              <button className="follow_button">Прати</button>
+              <button
+                className={
+                  isFollowing || isPending
+                    ? "edit_profile_button"
+                    : "follow_button"
+                }
+                onClick={handleFollow}
+              >
+                {isFollowing
+                  ? "Отпрати"
+                  : isPending
+                    ? "Захтев послат"
+                    : "Прати"}
+              </button>
             )}
           </div>
 
@@ -201,12 +306,36 @@ const Profile = () => {
       ) : (
         <h1>Loading...</h1>
       )}
-      {singlePost ? (
+
+      {singlePost && (
         <div className="overlay">
-          <SinglePost singlePostRef={singlePostRef} postInfo={postInfo} />
+          <SinglePost
+            singlePostRef={singlePostRef}
+            postInfo={postInfo}
+            onPostDeleted={(postId) => {
+              setPosts((prev) => prev.filter((p) => p.id !== postId));
+              setPostCount((prev) => prev - 1);
+              setSinglePost(false);
+            }}
+            onPostUpdated={(updatedPost) => {
+              setPosts((prev) =>
+                prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)),
+              );
+            }}
+          />
         </div>
-      ) : (
-        ""
+      )}
+
+      {followersModal && (
+        <div className="overlay">
+          <FollowersModal
+            followersModalRef={followersModalRef}
+            followersFollowing={followersFollowing}
+            profileUserId={profileInfo.id}
+            isOwnProfile={user.username === username}
+            onClose={() => setFollowersModal(false)}
+          />
+        </div>
       )}
     </div>
   );

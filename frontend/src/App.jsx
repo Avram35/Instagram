@@ -49,7 +49,11 @@ const App = () => {
             morePanRef={morePanRef}
             setCreatePost={setCreatePost}
           />
-          <Panel searchNotification={searchNotification} panRef={panRef} />
+          <Panel
+            searchNotification={searchNotification}
+            panRef={panRef}
+            setSearchNotification={setSearchNotification}
+          />
           <MorePanel
             morePanel={morePanel}
             setMorePanel={setMorePanel}
