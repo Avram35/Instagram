@@ -50,8 +50,13 @@ public class WebSecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/internal/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/user/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/user/id/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/user/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/user/all").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/user/*").permitAll()
                 .anyRequest().authenticated()
             );
 
