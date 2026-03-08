@@ -13,13 +13,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -31,7 +31,9 @@ import com.instagram.auth_service.repository.UserRepository;
 import com.instagram.auth_service.security.JwtUtil;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthenticationController {
@@ -65,116 +67,123 @@ public class AuthenticationController {
         try {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                    request.getUsernameOrEmail(),
+                    request.getUsernameOrEmail().trim().toLowerCase(),
                     request.getPassword()
                 )
             );
 
             final UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String token = jwtUtil.generateToken(userDetails.getUsername());
+            String token = jwtUtil.generateToken(userDetails.getUsername().trim().toLowerCase());
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
-            return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Подаци које сте унели нису исправни."));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Подаци које сте унели нису исправни."));
         }
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest user) 
     {
-        if (userRepository.existsByUsername(user.getUsername())) {
-            return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(Map.of("error", "Корисничко име је већ заузето!"));
+        if (userRepository.existsByUsername(user.getUsername().trim().toLowerCase())) 
+        {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Корисничко име је већ заузето!"));
         }
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(Map.of("error", "Email је већ заузет!"));
+        if (userRepository.existsByEmail(user.getEmail().trim().toLowerCase())) 
+        {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Email је већ заузет!"));
         }
 
-        User newUser = new User();
-        newUser.setUsername(user.getUsername());
-        newUser.setEmail(user.getEmail());
-        newUser.setFname(user.getFname());
-        newUser.setLname(user.getLname());
-        newUser.setPassword(encoder.encode(user.getPassword()));
+        try {
+            User newUser = new User();
+            newUser.setUsername(user.getUsername().trim().toLowerCase());
+            newUser.setEmail(user.getEmail().trim().toLowerCase());
+            newUser.setFname(user.getFname().trim());
+            newUser.setLname(user.getLname().trim());
+            newUser.setPassword(encoder.encode(user.getPassword()));
+    
+            userRepository.save(newUser);
+    
+            Map<String, Object> userProfile = new HashMap<>();
+            userProfile.put("id", newUser.getId());
+            userProfile.put("username", newUser.getUsername());
+            userProfile.put("fname", newUser.getFname());
+            userProfile.put("lname", newUser.getLname());
+    
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            headers.set("Content-Type", "application/json");
+    
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(userProfile, headers);
+    
+            restTemplate.postForEntity(
+                "http://user-service:8082/internal/api/v1/user",
+                entity,
+                Void.class
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", "Регистрација тренутно није могућа. Покушајте поново."));
+        }
 
-        userRepository.save(newUser);
-
-        Map<String, Object> userProfile = new HashMap<>();
-        userProfile.put("id", newUser.getId());
-        userProfile.put("username", newUser.getUsername());
-        userProfile.put("fname", newUser.getFname());
-        userProfile.put("lname", newUser.getLname());
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Internal-Api-Key", internalApiKey);
-        headers.set("Content-Type", "application/json");
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(userProfile, headers);
-
-        restTemplate.postForEntity(
-            "http://user-service:8082/internal/api/v1/user",
-            entity,
-            Void.class
-        );
-
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(Map.of("message", "Успешно сте се регистровали!"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Успешно сте се регистровали!"));
     }
-
     @PutMapping("/internal/update-username")
-    public ResponseEntity<?> updateUsername(@RequestBody Map<String, String> request, @RequestHeader("X-Internal-Api-Key") String apiKey) 
+    public ResponseEntity<?> updateUsername(@RequestBody Map<String, String> request) 
     {
-        if (!internalApiKey.equals(apiKey)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Неважећи кључ."));
-        }
 
         String oldUsername = request.get("oldUsername");
         String newUsername = request.get("newUsername");
 
-        User user = userRepository.findByUsernameOrEmail(oldUsername, oldUsername)
-            .orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+        if (oldUsername == null || newUsername == null || newUsername.trim().isEmpty()) 
+        {
+            return ResponseEntity.badRequest().body(Map.of("error", "Унесите исправно корисничко име."));
+        }
 
-        user.setUsername(newUsername);
+        if (userRepository.existsByUsername(newUsername.trim().toLowerCase())) 
+        {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Корисничко име је већ заузето."));
+        }
+
+
+        User user = userRepository.findByUsernameOrEmail(oldUsername, oldUsername).orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+
+        user.setUsername(newUsername.trim().toLowerCase());
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("message", "Username ажуриран."));
     }
-    
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteAccount(@RequestHeader("Authorization") String authHeader) {
-        try {
-            String token = authHeader.substring(7);
-            String username = jwtUtil.getUsernameFromToken(token);
 
-            User user = userRepository.findByUsernameOrEmail(username, username)
-                .orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteAccount(@AuthenticationPrincipal UserDetails currentUser) 
+    {
+        try {
+            String username = currentUser.getUsername();
+
+            User user = userRepository.findByUsernameOrEmail(username, username).orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+
+            Long userId = user.getId();
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Api-Key", internalApiKey);
-
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            restTemplate.exchange(
-                "http://user-service:8082/internal/api/v1/user/" + user.getId(),
-                HttpMethod.DELETE,
-                entity,
-                Void.class
-            );
+            DeleteUser("http://user-service:8082/internal/api/v1/user/" + userId, entity, "user-service");
 
             userRepository.delete(user);
-
             return ResponseEntity.ok(Map.of("message", "Налог је успешно обрисан."));
         } catch (Exception e) {
             return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Брисање налога није успело: " + e.getMessage()));
+                .body(Map.of("error", "Брисање налога није успело. Покушајте поново."));
         }
     }
+
+    private void DeleteUser(String url, HttpEntity<Void> entity, String serviceName) {
+        try {
+            restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+        } catch (Exception e) {
+            log.warn("Неуспешно брисање из {}: {}", serviceName, e.getMessage());
+        }
+    }
+
 }

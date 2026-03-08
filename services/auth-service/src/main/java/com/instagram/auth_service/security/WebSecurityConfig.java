@@ -47,6 +47,11 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public InternalAuthApiKeyFilter internalAuthApiKeyFilter() {
+        return new InternalAuthApiKeyFilter();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception 
     {
         http
@@ -62,11 +67,12 @@ public class WebSecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/v1/auth/signin", "/api/v1/auth/signup").permitAll()
                 .requestMatchers("/api/v1/auth/internal/**").permitAll()
                 .anyRequest().authenticated()
             );
-
+        http.addFilterBefore(internalAuthApiKeyFilter(), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

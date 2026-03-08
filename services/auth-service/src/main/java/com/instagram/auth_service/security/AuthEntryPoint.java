@@ -22,7 +22,9 @@ public class AuthEntryPoint implements AuthenticationEntryPoint {
     )
         throws IOException, ServletException 
         {
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "401 Unauthorized");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"error\": \"Нисте Пријављени. Молимо пријавите се.\"}");
         }
 
 }
