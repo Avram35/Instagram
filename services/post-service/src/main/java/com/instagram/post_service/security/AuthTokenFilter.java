@@ -55,10 +55,3 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         return null;
     }
 }
-
-// Ova klasa predstavlja filter koji se izvršava jednom po zahtevu (OncePerRequestFilter) 
-// i koristi se za autentifikaciju korisnika na osnovu JWT tokena.
-// U metodi doFilterInternal, filter pokušava da izvuče JWT token iz Authorization
-// header-a, validira token, i ako je validan, postavlja autentifikaciju u 
-// SecurityContextHolder. Ovo omogućava da se korisnik prepozna kao autentifikovan
-//  prilikom obrade zahteva.

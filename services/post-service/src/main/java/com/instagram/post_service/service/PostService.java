@@ -1,5 +1,8 @@
 package com.instagram.post_service.service;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +13,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.imageio.ImageIO;
+
+import org.imgscalr.Scalr;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -31,17 +42,20 @@ public class PostService {
 
     private static final String UPLOAD_DIR = "/app/uploads/posts/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+    private static final long MAX_TOTAL_REQUEST_SIZE = 20 * 50 * 1024 * 1024;
     private static final int MAX_MEDIA_PER_POST = 20;
-    private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
-        "image/jpeg", "image/png", "image/gif", "image/webp"
-    );
-    private static final List<String> ALLOWED_VIDEO_TYPES = List.of(
-        "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"
-    );
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png");
+    private static final List<String> ALLOWED_VIDEO_TYPES = List.of("video/mp4", "video/mov");
+    private static final int MAX_WIDTH  = 1080;
+    private static final int MAX_HEIGHT = 1080;
 
     private final PostRepository postRepository;
     private final PostMediaRepository postMediaRepository;
     private final RestTemplate restTemplate;
+
+    // API kljuc za pozive ka interactive-service
+    @Value("${internal.api.key}")
+    private String internalApiKey;
 
     public PostService(PostRepository postRepository, PostMediaRepository postMediaRepository, RestTemplate restTemplate) {
         this.postRepository = postRepository;
@@ -49,12 +63,8 @@ public class PostService {
         this.restTemplate = restTemplate;
     }
 
-    // ==================== КРЕИРАЊЕ ОБЈАВЕ ====================
+    // ==================== KREIRANJE OBJAVE ====================
 
-    /**
-     * Креирај објаву са медија фајловима.
-     * Прво се креира пост, затим се upload-ују фајлови.
-     */
     @Transactional
     public PostDto createPost(Long userId, String description, List<MultipartFile> files) throws IOException {
         if (files == null || files.isEmpty()) {
@@ -65,20 +75,26 @@ public class PostService {
             throw new IllegalArgumentException("Максималан број медија фајлова по објави је " + MAX_MEDIA_PER_POST + ".");
         }
 
-        // Валидирај све фајлове пре чувања
+        long totalSize = files.stream().mapToLong(MultipartFile::getSize).sum();
+        if (totalSize > MAX_TOTAL_REQUEST_SIZE) {
+            throw new IllegalArgumentException("Укупна величина свих фајлова не сме прећи 1GB.");
+        }
+
+        if (description != null && description.length() > 2200) {
+            throw new IllegalArgumentException("Опис не може бити дужи од 2200 карактера.");
+        }
+
         for (MultipartFile file : files) {
             validateFile(file);
         }
 
-        // Креирај пост
         Post post = Post.builder()
             .userId(userId)
-            .description(description)
+            .description(description != null ? description.trim() : null)
             .createdAt(LocalDateTime.now())
             .build();
         post = postRepository.save(post);
 
-        // Upload и сачувај медија фајлове
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
             String savedPath = saveFile(file);
@@ -98,7 +114,7 @@ public class PostService {
         return toDto(post);
     }
 
-    // ==================== АЖУРИРАЊЕ ОПИСА ====================
+    // ==================== AZURIRANJE OPISA ====================
 
     public PostDto updateDescription(Long postId, Long userId, String description) {
         Post post = postRepository.findById(postId)
@@ -108,17 +124,21 @@ public class PostService {
             throw new IllegalArgumentException("Немате дозволу за измену ове објаве.");
         }
 
-        post.setDescription(description);
+        if (description != null && description.length() > 2200) {
+            throw new IllegalArgumentException("Опис не може бити дужи од 2200 карактера.");
+        }
+
+        post.setDescription(description != null ? description.trim() : null);
         post.setUpdatedAt(LocalDateTime.now());
         postRepository.save(post);
 
         return toDto(post);
     }
 
-    // ==================== БРИСАЊЕ ОБЈАВЕ ====================
+    // ==================== BRISANJE OBJAVE ====================
 
     @Transactional
-    public void deletePost(Long postId, Long userId) {
+    public void deletePost(Long postId, Long userId) throws IOException {
         Post post = postRepository.findById(postId)
             .orElseThrow(() -> new RuntimeException("Објава није пронађена."));
 
@@ -126,20 +146,37 @@ public class PostService {
             throw new IllegalArgumentException("Немате дозволу за брисање ове објаве.");
         }
 
-        // Обриши медија фајлове са диска
-        List<PostMedia> mediaList = postMediaRepository.findByPostIdOrderByPositionAsc(postId);
+        deletePostInternal(post);
+    }
+
+    // Interni metod za brisanje objave
+    @Transactional
+    private void deletePostInternal(Post post) throws IOException {
+        List<PostMedia> mediaList = postMediaRepository.findByPostIdOrderByPositionAsc(post.getId());
         for (PostMedia media : mediaList) {
-            deleteFileFromDisk(media.getMediaUrl());
+            safeDeleteFileFromDisk(media.getMediaUrl());
         }
 
-        postMediaRepository.deleteByPostId(postId);
+        deleteInteractionsForPost(post.getId());
+
+        postMediaRepository.deleteByPostId(post.getId());
         postRepository.delete(post);
     }
 
-    // ==================== БРИСАЊЕ ПОЈЕДИНАЧНОГ МЕДИЈА ====================
+    // Brisanje svih objava korisnika
+    @Transactional
+    public void deleteAllPostsByUser(Long userId) throws IOException {
+        List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        for (Post post : posts) {
+            deletePostInternal(post);
+        }
+        log.info("Обрисано {} објава за корисника {}", posts.size(), userId);
+    }
+
+    // ==================== BRISANJE JEDNOG DELA POST-A ====================
 
     @Transactional
-    public PostDto deleteMedia(Long postId, Long mediaId, Long userId) {
+    public PostDto deleteMedia(Long postId, Long mediaId, Long userId) throws IOException {
         Post post = postRepository.findById(postId)
             .orElseThrow(() -> new RuntimeException("Објава није пронађена."));
 
@@ -154,22 +191,23 @@ public class PostService {
             throw new IllegalArgumentException("Медија не припада овој објави.");
         }
 
-        // Провери да ли је ово последњи медија — ако јесте, обриши целу објаву
         long mediaCount = postMediaRepository.countByPostId(postId);
         if (mediaCount <= 1) {
-            deleteFileFromDisk(media.getMediaUrl());
+            safeDeleteFileFromDisk(media.getMediaUrl());
             postMediaRepository.delete(media);
+            deleteInteractionsForPost(postId);
+            // Post ostaje bez medija, pa se briše
             postRepository.delete(post);
-            return null; // Објава обрисана
+            return null;
         }
 
-        deleteFileFromDisk(media.getMediaUrl());
+        safeDeleteFileFromDisk(media.getMediaUrl());
         postMediaRepository.delete(media);
 
         return toDto(post);
     }
 
-    // ==================== ПРЕУЗИМАЊЕ ОБЈАВА ====================
+    // ==================== PREUZIMANJE OBJAVA ====================
 
     public PostDto getPostById(Long postId) {
         Post post = postRepository.findById(postId)
@@ -188,7 +226,41 @@ public class PostService {
         return postRepository.countByUserId(userId);
     }
 
-    // ==================== ПОМОЋНЕ МЕТОДЕ ====================
+    // ==================== PROVERA PRISTUPA ====================
+
+    public boolean canViewPosts(Long requesterId, Long postOwnerId) {
+        if (requesterId.equals(postOwnerId)) return true;
+
+        try {
+            UserProfileDto owner = restTemplate.getForObject(
+                "http://user-service:8082/api/v1/user/id/" + postOwnerId,
+                UserProfileDto.class
+            );
+
+            if (owner == null || owner.getPrivateProfile() == null || !owner.getPrivateProfile()) {
+                return true;
+            }
+
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map> followCheck = restTemplate.exchange(
+                "http://follow-service:8083/api/v1/follow/check-internal/" + requesterId + "/" + postOwnerId,
+                HttpMethod.GET,
+                entity,
+                Map.class
+            );
+            return followCheck.getBody() != null && Boolean.TRUE.equals(followCheck.getBody().get("following"));
+        } catch (Exception e) {
+            log.warn("Грешка при провери приступа: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    // ==================== POMOCNE METODE ====================
 
     public Long getUserIdByUsername(String username) {
         try {
@@ -209,7 +281,7 @@ public class PostService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("Фајл " + file.getOriginalFilename() + " прелази максималну величину од 50 MB.");
+            throw new IllegalArgumentException("Фајл прелази максималну величину од 50 MB.");
         }
 
         String contentType = file.getContentType();
@@ -230,20 +302,94 @@ public class PostService {
     }
 
     private String saveFile(MultipartFile file) throws IOException {
-        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path filepath = Paths.get(UPLOAD_DIR + filename);
+        String ext = getExtension(file.getContentType());
+        String filename = UUID.randomUUID() + ext;
+        Path uploadDir = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Path filepath = uploadDir.resolve(filename).normalize();
+
+        if (!filepath.startsWith(uploadDir)) {
+            throw new IOException("Неисправна путања фајла.");
+        }
+
         Files.createDirectories(filepath.getParent());
-        Files.write(filepath, file.getBytes());
+
+        String mediaType = getMediaType(file.getContentType());
+        if ("image".equals(mediaType)) {
+            byte[] resized = resizeImage(file.getBytes(), file.getContentType(), ext);
+            Files.write(filepath, resized);
+        } else {
+            Files.write(filepath, file.getBytes());
+        }
+
         return "/uploads/posts/" + filename;
     }
 
-    private void deleteFileFromDisk(String mediaUrl) {
+    private byte[] resizeImage(byte[] imageBytes, String contentType, String ext) throws IOException {
+        BufferedImage original = ImageIO.read(new ByteArrayInputStream(imageBytes));
+        if (original == null) {
+            throw new IllegalArgumentException("Није могуће прочитати слику.");
+        }
+
+        if (original.getWidth() <= MAX_WIDTH && original.getHeight() <= MAX_HEIGHT) {
+            return imageBytes;
+        }
+
+        BufferedImage resized = Scalr.resize(original, Scalr.Method.QUALITY, Scalr.Mode.FIT_TO_WIDTH,MAX_WIDTH, MAX_HEIGHT);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        String formatName = ext.replace(".", "");
+        if ("jpg".equals(formatName)) formatName = "jpeg";
+        ImageIO.write(resized, formatName, out);
+        return out.toByteArray();
+    }
+    
+    private String getExtension(String contentType) {
+        if (contentType == null) return "";
+        return switch (contentType) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png"  -> ".png";
+            case "video/mp4"  -> ".mp4";
+            case "video/mov"  -> ".mov";
+            default           -> "";
+        };
+    }
+
+    private void safeDeleteFileFromDisk(String mediaUrl) {
         try {
             String filename = mediaUrl.replace("/uploads/posts/", "");
-            Path filepath = Paths.get(UPLOAD_DIR + filename);
+            Path uploadDir = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+            Path filepath = uploadDir.resolve(filename).normalize();
+
+            if (!filepath.startsWith(uploadDir)) {
+                log.error("Path traversal покушај при брисању: {}", mediaUrl);
+                return;
+            }
             Files.deleteIfExists(filepath);
         } catch (IOException e) {
-            log.warn("Неуспешно брисање фајла: {}", mediaUrl);
+            log.warn("Грешка при брисању фајла {}: {}", mediaUrl, e.getMessage());
+        }
+    }
+
+    private void deleteInteractionsForPost(Long postId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Api-Key", internalApiKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            restTemplate.exchange(
+                "http://interactive-service:8087/api/v1/like/internal/post/" + postId,
+                HttpMethod.DELETE, entity, Void.class
+            );
+        } catch (Exception e) {
+            log.warn("Неуспешно брисање лајкова за објаву {}: {}", postId, e.getMessage());
+        }
+        try {
+            restTemplate.exchange(
+                "http://interactive-service:8087/api/v1/comment/internal/post/" + postId,
+                HttpMethod.DELETE, entity, Void.class
+            );
+        } catch (Exception e) {
+            log.warn("Неуспешно брисање коментара за објаву {}: {}", postId, e.getMessage());
         }
     }
 
@@ -260,7 +406,6 @@ public class PostService {
             )
             .collect(Collectors.toList());
 
-        // Преузми податке о кориснику
         String username = null;
         String profilePictureUrl = null;
         try {
@@ -275,6 +420,7 @@ public class PostService {
         } catch (Exception e) {
             log.warn("Неуспешно преузимање корисника за пост {}: {}", post.getId(), e.getMessage());
         }
+
         long likesCount = 0;
         long commentsCount = 0;
         try {
@@ -301,6 +447,7 @@ public class PostService {
         } catch (Exception e) {
             log.warn("Неуспешно преузимање коментара: {}", e.getMessage());
         }
+
         return PostDto.builder()
             .id(post.getId())
             .userId(post.getUserId())

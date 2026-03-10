@@ -10,6 +10,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Враћа JSON одговор уместо HTML error странице при неуспелој аутентификацији.
+ */
 @Component
 public class AuthEntryPoint implements AuthenticationEntryPoint {
 
@@ -19,9 +22,8 @@ public class AuthEntryPoint implements AuthenticationEntryPoint {
         HttpServletResponse response,
         AuthenticationException authException
     ) throws IOException, ServletException {
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "401 Unauthorized");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"error\": \"Нисте пријављени. Молимо пријавите се.\"}");
     }
 }
-
-// Ova klasa implementira AuthenticationEntryPoint i koristi se za obradu neautorizovanih zahteva.
-// Kada korisnik pokuša da pristupi zaštićenim resursima bez validne autentifikacije, ovaj entry point će biti pozvan i poslaće HTTP odgovor sa statusom 401 Unauthorized. Ovo je standardni način da se obavesti klijent da nije autorizovan za pristup traženom resursu.

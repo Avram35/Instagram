@@ -15,7 +15,4 @@ public class MediaDto {
     private String mediaType;
     private Integer position;
     private Long fileSize;
-} 
-
-// predstavljanje medija fajla koji je povezan sa objavom,
-// ukljucujuci URL do fajla, tip medija, poziciju u objavi, i velicinu fajla. 
+}

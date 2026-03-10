@@ -23,8 +23,4 @@ public class PostDto {
     private Long commentsCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-} 
-
-// DTO koji predstavlja samu objavu, ukljucujuci informacije o korisniku 
-// koji je kreirao objavu, opis, listu medija fajlova povezanih sa objavom, 
-// broj lajkova, broj komentara, i vremenske oznake kreiranja i azuriranja objave
+}

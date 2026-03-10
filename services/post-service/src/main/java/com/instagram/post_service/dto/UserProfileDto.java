@@ -15,9 +15,4 @@ public class UserProfileDto {
     private String bio;
     private String profilePictureUrl;
     private Boolean privateProfile;
-} 
-
-// DTO koji predstavlja profil korisnika, ukljucujuci informacije kao sto su korisnicko ime,
-//  ime korisnika
-//  prezime korisnika, bio tj opis, URL do profilne slike, i informaciju o tome 
-// da li je profil privatan ili javan
+}

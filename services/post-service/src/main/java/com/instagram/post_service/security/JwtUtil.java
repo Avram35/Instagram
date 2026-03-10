@@ -44,13 +44,3 @@ public class JwtUtil {
         return false;
     }
 }
-
-// Ova klasa je  klasa za rad sa JWT tokenima. 
-// Sadrzi metode za izvlačenje korisničkog imena iz tokena i validaciju tokena.
-// U metodi init(), tajni kljuc se inicijalizuje nakon što se vrednost ${jwt.secret} 
-// iz application.properties fajla učita u polje jwtSecret.
-// Metoda getUsernameFromToken() koristi Jwts.parser() da parsira token i
-//  izvadi korisničko ime (subject) iz tokena.
-// Metoda validateJwtToken() pokušava da parsira token i vrati true 
-// ako je token validan, ili false ako nije. Ako token nije validan,
-//  hvata se JwtException ili IllegalArgumentException i loguje se greška.

@@ -11,7 +11,3 @@ public class PostServiceApplication {
 	}
 
 }
-
-// Ova klasa predstavlja glavnu klasu Spring Boot aplikacije za post-service.
-// Anotacija @SpringBootApplication označava da je ovo glavna klasa aplikacije i 
-// omogućava automatsku konfiguraciju, skeniranje komponenti i druge funkcionalnosti Spring Boot-a.

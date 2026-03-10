@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,13 +34,6 @@ public class PostController {
         this.postService = postService;
     }
 
-    /**
-     * Ovde kreiram novu objavu koja moze sadrzati medija fajlove.
-     * POST /api/v1/post
-     * Content-Type: multipart/form-data
-     *   - files: MultipartFile[] (обавезно, макс 20, макс 50MB по фајлу)
-     *   - description: String (опционо)
-     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createPost(
         @RequestParam("files") List<MultipartFile> files,
@@ -51,10 +45,6 @@ public class PostController {
         return ResponseEntity.ok(post);
     }
 
-    /**
-     * Ovaj deo koda omogucava korisniku da azurira opis objave koju je odabrao za azuriranje.
-     * PUT /api/v1/post/{postId}
-     */
     @PutMapping("/{postId}")
     public ResponseEntity<?> updateDescription(
         @PathVariable Long postId,
@@ -66,68 +56,97 @@ public class PostController {
         return ResponseEntity.ok(post);
     }
 
-    /**
-     * Naredbe za brisanje cele objave.
-     * DELETE /api/v1/post/{postId}
-     */
     @DeleteMapping("/{postId}")
     public ResponseEntity<?> deletePost(
         @PathVariable Long postId,
         @AuthenticationPrincipal UserDetails currentUser
-    ) {
+    ) throws IOException {
         Long userId = postService.getUserIdByUsername(currentUser.getUsername());
         postService.deletePost(postId, userId);
         return ResponseEntity.ok(Map.of("message", "Објава је обрисана."));
     }
 
-    /**
-     * Naredbe za brisanje pojedinačnog medija iz objave. 
-     * Ako se obrisu svi mediji ukljucujuci i poslednji koji je preostao, onda se brise i cela objava. 
-     * Ne moze da postoji objava bez ijednog medija ili objava koja nema medije a ima opis. 
-     * DELETE /api/v1/post/{postId}/media/{mediaId}
-     */
     @DeleteMapping("/{postId}/media/{mediaId}")
     public ResponseEntity<?> deleteMedia(
         @PathVariable Long postId,
         @PathVariable Long mediaId,
         @AuthenticationPrincipal UserDetails currentUser
-    ) {
+    ) throws IOException {
         Long userId = postService.getUserIdByUsername(currentUser.getUsername());
         PostDto result = postService.deleteMedia(postId, mediaId, userId);
         if (result == null) {
-            return ResponseEntity.ok(Map.of("message", "Објава је обрисана јер је уклоњен последњи медија."));
+            return ResponseEntity.ok(Map.of("message", "Објава је обрисана јер је уклоњена последња слика/видео."));
         }
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * Preuzimanje objave po ID-u, sto treba da ukljuci i sve povezane medija fajlove. 
-     * GET /api/v1/post/{postId}
-     */
     @GetMapping("/{postId}")
-    public ResponseEntity<?> getPost(@PathVariable Long postId) {
+    public ResponseEntity<?> getPost(
+        @PathVariable Long postId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long requesterId = postService.getUserIdByUsername(currentUser.getUsername());
         PostDto post = postService.getPostById(postId);
+
+        if (!postService.canViewPosts(requesterId, post.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Немате приступ објавама овог корисника."));
+        }
+
+        // Ako je post null, to znaci da je obrisan (nema vise medija), ali korisnik je vlasnik posta
+
         return ResponseEntity.ok(post);
     }
 
-    /**
-     * Preuzmi sve objave koje je korisnik kreirao, ukljucujuci i sve povezane medija fajlove, za feed i profil. 
-     * GET /api/v1/post/user/{userId}
-     */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PostDto>> getPostsByUser(@PathVariable Long userId) {
+    public ResponseEntity<?> getPostsByUser(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long requesterId = postService.getUserIdByUsername(currentUser.getUsername());
+
+        if (!postService.canViewPosts(requesterId, userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Немате приступ објавама овог корисника."));
+        }
+
         return ResponseEntity.ok(postService.getPostsByUserId(userId));
     }
 
-    /**
-     * Naredba koja u sumira broj objava koje je korisnik kreirao 
-     * Prikazuje se na samom profilu 
-     * Moze biti korisno za prikaz ukupnog broja objava na profilu koeisnika, kao i za analitiku i statistiku unutra aplikacije. 
-     * GET /api/v1/post/count/{userId}
-     */
     @GetMapping("/count/{userId}")
     public ResponseEntity<Map<String, Long>> getPostCount(@PathVariable Long userId) {
         long count = postService.getPostCount(userId);
         return ResponseEntity.ok(Map.of("count", count));
+    }
+
+    // ==================== INTERNI ENDPOINTI ====================
+    // Zasticeni InternalApiKeyFilter-om (X-Internal-Api-Key)
+
+    @GetMapping("/internal/{postId}")
+    public ResponseEntity<?> getPostInternal(@PathVariable Long postId) {
+        try {
+            PostDto post = postService.getPostById(postId);
+            return ResponseEntity.ok(post);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Објава није пронађена."));
+        }
+    }
+// Poziva ga feed-service da proveri da li je korisnik blokiran pre prikazivanja objava
+    @GetMapping("/internal/user/{userId}")
+    public ResponseEntity<List<PostDto>> getPostsByUserInternal(@PathVariable Long userId) {
+        return ResponseEntity.ok(postService.getPostsByUserId(userId));
+    }
+    
+
+    // Brisanje svih objava korisnika
+    // Poziva ga auth-service pri deleteAccount()
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllPostsByUser(@PathVariable Long userId) {
+        try {
+            postService.deleteAllPostsByUser(userId);
+        } catch (Exception e) {
+        }
+        return ResponseEntity.noContent().build();
     }
 }

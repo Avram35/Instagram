@@ -10,5 +10,3 @@ import lombok.NoArgsConstructor;
 public class UpdatePostRequest {
     private String description;
 }
-
-// DTO koji se koristi za azuriranje postojece objave, u ovom slucaju samo za azuriranje opisa objave 

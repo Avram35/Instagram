@@ -11,4 +11,4 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:/app/uploads/");
     }
-} //ovaj deo koda omogucava cuvanje slika u folderu uploads i pristup tim slikama preko URL-a /uploads/{filename}
+}
