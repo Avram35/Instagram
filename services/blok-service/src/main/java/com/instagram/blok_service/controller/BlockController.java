@@ -26,9 +26,6 @@ public class BlockController {
         this.blockService = blockService;
     }
 
-    /*
-    Блокирај корисника.
-    */
     @PostMapping("/{userId}")
     public ResponseEntity<Map<String, String>> block(
         @PathVariable Long userId,
@@ -39,9 +36,6 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("message", "Корисник је блокиран."));
     }
 
-    /*
-    Одблокирај корисника.
-    */
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, String>> unblock(
         @PathVariable Long userId,
@@ -52,9 +46,6 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("message", "Корисник је одблокиран."));
     }
 
-    /*
-    Провери да ли је тренутни корисник блокирао неког.
-    */
     @GetMapping("/check/{userId}")
     public ResponseEntity<Map<String, Boolean>> isBlocked(
         @PathVariable Long userId,
@@ -65,9 +56,6 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("blocked", blocked));
     }
     
-    /*
-    Провери да ли је неки корисник блокирао тренутног корисника.
-    */
     @GetMapping("/check-by/{userId}")
     public ResponseEntity<Map<String, Boolean>> isBlockedBy(
         @PathVariable Long userId,
@@ -78,10 +66,7 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("blocked", blocked));
     }
 
-    /*
-    Провери да ли постоји блок у било ком смеру.
-    Остали сервиси позивају овај ендпоинт.
-    */
+    // Interni — pozivaju ga drugi servisi sa X-Internal-Api-Key
     @GetMapping("/check-either/{userId1}/{userId2}")
     public ResponseEntity<Map<String, Boolean>> isBlockedEitherWay(
         @PathVariable Long userId1,
@@ -91,14 +76,19 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("blocked", blocked));
     }
 
-    /*
-    Листа блокираних корисника.
-    */
     @GetMapping("/list")
     public ResponseEntity<List<BlockDto>> getBlockedUsers(
         @AuthenticationPrincipal UserDetails currentUser
     ) {
         Long currentUserId = blockService.getUserIdByUsername(currentUser.getUsername());
         return ResponseEntity.ok(blockService.getBlockedUsers(currentUserId));
+    }
+
+    // ===== DODATO: Interni endpoint za kaskadno brisanje pri brisanju naloga =====
+    // Poziva auth-service pri deleteAccount() — brise sve blokove gde je korisnik ucestvovao
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllBlocksForUser(@PathVariable Long userId) {
+        blockService.deleteAllBlocksForUser(userId);
+        return ResponseEntity.noContent().build();
     }
 }

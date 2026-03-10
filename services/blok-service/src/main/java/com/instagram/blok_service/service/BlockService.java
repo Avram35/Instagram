@@ -4,6 +4,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -22,15 +26,14 @@ public class BlockService {
     private final BlockRepository blockRepository;
     private final RestTemplate restTemplate;
 
+    @Value("${internal.api.key}")
+    private String internalApiKey;
+
     public BlockService(BlockRepository blockRepository, RestTemplate restTemplate) {
         this.blockRepository = blockRepository;
         this.restTemplate = restTemplate;
     }
 
-    /*
-    Блокирај корисника.
-    Ако блокирани корисник прати блокера или обрнуто — уклони праћење позивом follow-service.
-    */
     @Transactional
     public BlockDto block(Long blockerId, Long blockedId) {
         if (blockerId.equals(blockedId)) {
@@ -41,7 +44,6 @@ public class BlockService {
             throw new IllegalStateException("Корисник је већ блокиран.");
         }
 
-        // Уклони праћење у оба смера преко follow-service
         removeFollowIfExists(blockerId, blockedId);
         removeFollowIfExists(blockedId, blockerId);
 
@@ -55,9 +57,6 @@ public class BlockService {
         return toDto(saved);
     }
 
-    /*
-    Одблокирај корисника.
-    */
     @Transactional
     public void unblock(Long blockerId, Long blockedId) {
         Block block = blockRepository.findByBlockerIdAndBlockedId(blockerId, blockedId)
@@ -65,25 +64,15 @@ public class BlockService {
         blockRepository.delete(block);
     }
 
-    /*
-    Провери да ли је blockerId блокирао blockedId.
-    */
     public boolean isBlocked(Long blockerId, Long blockedId) {
         return blockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
     }
 
-    /*
-    Провери да ли постоји блок у било ком смеру између два корисника.
-    Користи се за проверу да ли два корисника могу да интерагују.
-    */
     public boolean isBlockedEitherWay(Long userId1, Long userId2) {
         return blockRepository.existsByBlockerIdAndBlockedId(userId1, userId2)
             || blockRepository.existsByBlockerIdAndBlockedId(userId2, userId1);
     }
 
-    /*
-    Листа блокираних корисника.
-    */
     public List<BlockDto> getBlockedUsers(Long blockerId) {
         return blockRepository.findByBlockerId(blockerId)
             .stream()
@@ -91,24 +80,31 @@ public class BlockService {
             .collect(Collectors.toList());
     }
 
-    /*
-    Позови follow-service да уклони праћење ако постоји.
-    */
-    private void removeFollowIfExists(Long followerId, Long followingId) {
-    try {
-        restTemplate.delete(
-            "http://follow-service:8083/api/v1/follow/internal/unfollow?followerId=" 
-                + followerId + "&followingId=" + followingId
-        );
-    } catch (Exception e) {
-        log.warn("Неуспешно уклањање праћења између {} и {}: {}", 
-            followerId, followingId, e.getMessage());
+    // Poziva se pri brisanju naloga — brise sve gde je korisnik bloker/blokiran
+    @Transactional
+    public void deleteAllBlocksForUser(Long userId) {
+        long deleted = blockRepository.deleteAllByUserId(userId);
+        log.info("Обрисано {} блокова за корисника {}", deleted, userId);
     }
-}
 
-    /*
-    Помоћни метод — из username-а добија userId.
-    */
+    private void removeFollowIfExists(Long followerId, Long followingId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            restTemplate.exchange(
+                "http://follow-service:8083/api/v1/follow/internal/unfollow?followerId=" + followerId + "&followingId=" + followingId,
+                HttpMethod.DELETE,
+                entity,
+                Void.class
+            );
+        } catch (Exception e) {
+            log.warn("Неуспешно уклањање праћења између {} и {}: {}", 
+                followerId, followingId, e.getMessage());
+        }
+    }
+
     public Long getUserIdByUsername(String username) {
         try {
             UserProfileDto profile = restTemplate.getForObject(

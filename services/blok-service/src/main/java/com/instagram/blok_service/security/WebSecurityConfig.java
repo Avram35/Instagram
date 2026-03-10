@@ -33,6 +33,11 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public InternalApiKeyFilter internalApiKeyFilter() {
+        return new InternalApiKeyFilter();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -40,7 +45,7 @@ public class WebSecurityConfig {
                 CorsConfiguration config = new CorsConfiguration();
                 config.setAllowedOrigins(List.of("http://localhost:5173"));
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+                config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Internal-Api-Key"));
                 config.setAllowCredentials(true);
                 return config;
             }))
@@ -48,11 +53,12 @@ public class WebSecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Други сервиси позивају check-either без JWT
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/block/check-either/**").permitAll()
                 // Све остало захтева JWT
                 .anyRequest().authenticated()
             );
-
+        http.addFilterBefore(internalApiKeyFilter(), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
