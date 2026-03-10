@@ -30,10 +30,10 @@ public class CommentController {
     }
 
     /**
-     * Komentarisanje objave
      * POST /api/v1/comment/{postId}
      */
-    //    @PostMapping("/{postId}")
+    // Dodaje komentare na objave 
+        @PostMapping("/{postId}")
     public ResponseEntity<?> addComment(
         @PathVariable Long postId,
         @RequestBody CommentRequest request,
@@ -42,11 +42,11 @@ public class CommentController {
         Long userId = commentService.getUserIdByUsername(currentUser.getUsername());
         CommentDto comment = commentService.addComment(userId, postId, request.getContent());
         return ResponseEntity.ok(comment);
-    
     }
 
     /**
-     * Izmena komentara // samo autor komentara može da menja     * PUT /api/v1/comment/{commentId}
+     * Dozvoljava korisniku da izmeni svoj komentar.
+     * PUT /api/v1/comment/{commentId}
      */
     @PutMapping("/{commentId}")
     public ResponseEntity<?> updateComment(
@@ -60,9 +60,8 @@ public class CommentController {
     }
 
     /**
-     * Brisanje komentara 
-     * - samo autor komentara ili vlasnik objave mogu da brišu
-     *      * DELETE /api/v1/comment/{commentId}
+     * Dozvoljava korisniku da obriše svoj komentar.
+     * DELETE /api/v1/comment/{commentId}
      */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<?> deleteComment(
@@ -75,7 +74,8 @@ public class CommentController {
     }
 
     /**
-     * Komentari na objavi // svi korisnici mogu da vide komentare, ali se prikazuju samo oni koji nisu obrisani    
+     Prikazuje sve komentare za oredjenu objavu 
+     Ako je korisnik ulogovan, prikazuje i informaciju da li je lajkovao svaki komentar.
      * GET /api/v1/comment/{postId}/list
      */
     @GetMapping("/{postId}/list")
@@ -91,8 +91,7 @@ public class CommentController {
     }
 
     /**
-     * Broj komentara na objavi
-     * // - svi korisnici mogu da vide broj komentara, ali se računaju samo oni koji nisu obrisani
+     Broj komentara za odredjenu objavu. Ako je korisnik ulogovan, prikazuje broj komentara koje je on lajkovao.
      * GET /api/v1/comment/count/{postId}
      */
     @GetMapping("/count/{postId}")
@@ -109,9 +108,8 @@ public class CommentController {
     }
 
     /**
-     * Interni endpoint za brisanje svih komentara na objavi (kada se objava briše)
+     * Interni - brisi sve komentare za odredjenu objavu. Koristi se kada se objava obrise, da bi se obrisali i svi komentari vezani za tu objavu.
      * DELETE /api/v1/comment/internal/post/{postId}
-     // - Ovaj endpoint nije za javnu upotrebu, koristi se samo unutar sistema kada se briše objava, da bi se obrisali svi komentari vezani za tu objavu.
      */
     @DeleteMapping("/internal/post/{postId}")
     public ResponseEntity<Void> deleteAllByPost(@PathVariable Long postId) {

@@ -11,9 +11,3 @@ class InteractiveServiceApplicationTests {
 	}
 
 }
-
-// Ovaj test proverava da li se Spring Boot 
-// kontekst uspešno učitava, što je osnovni 
-// test za svaku Spring Boot aplikaciju. Ako ovaj test 
-// prođe, to znači da su svi bean-ovi uspešno kreirani 
-// i da nema problema sa konfiguracijom aplikacije.

@@ -27,8 +27,7 @@ public class LikeController {
     }
 
     /**
-     * Lajkovanje objave 
-     * // - svaki korisnik može da lajkuje objavu samo jednom, ako pokuša ponovo, lajka će se ukloniti (unlike)
+     *Omogucava lajkovanje objave 
      * POST /api/v1/like/{postId}
      */
     @PostMapping("/{postId}")
@@ -42,10 +41,9 @@ public class LikeController {
     }
 
     /**
-     * Uklanjanje lajka 
+     * Uogucava opciju odlajkovanja objave tj uklanjanja lajka sa te specificne objave
      * DELETE /api/v1/like/{postId}
      */
-    // - korisnik može da ukloni lajka sa objave, ali samo ako je prethodno lajkovao tu objavu
     @DeleteMapping("/{postId}")
     public ResponseEntity<?> unlikePost(
         @PathVariable Long postId,
@@ -57,8 +55,7 @@ public class LikeController {
     }
 
     /**
-     * Da li je post lajkovan od strane trenutnog korisnika
-     * // - svaki korisnik može da vidi da li je lajkovao objavu, ali ne može da vidi ko su ostali korisnici koji su lajkovali objavu
+     *Proverava da li je korisnik lajkovao odredjenu objavu. Ako nije ulogovan, uvek vraća false.
      * GET /api/v1/like/check/{postId}
      */
     @GetMapping("/check/{postId}")
@@ -72,10 +69,9 @@ public class LikeController {
     }
 
     /**
-     * Broj lajkova na objavi
+     *Prikazuje broj lajkova na objavi 
      * GET /api/v1/like/count/{postId}
      */
-    // - svi korisnici mogu da vide broj lajkova, ali se računaju samo oni koji nisu uklonjeni (unliked)
     @GetMapping("/count/{postId}")
     public ResponseEntity<Map<String, Long>> getLikesCount(
         @PathVariable Long postId,
@@ -90,22 +86,18 @@ public class LikeController {
     }
 
     /**
-     * Ko je sve lajkovao objavu
+     * Lista svih krisnika koji su lajkovali odredjenu objavu 
      * GET /api/v1/like/{postId}/list
      */
-    // - svi korisnici mogu da vide broj lajkova, ali se ne prikazuju korisnici koji su uklonili lajka (unliked)
-     
     @GetMapping("/{postId}/list")
     public ResponseEntity<List<LikeDto>> getLikes(@PathVariable Long postId) {
         return ResponseEntity.ok(likeService.getLikes(postId));
     }
 
     /**
-     * Interni endpoint za brisanje svih lajkova na objavi (kada se objava briše)
+     * Interni - brisi sve lajkove za odredjenu objavu (kada se objava brise).
      * DELETE /api/v1/like/internal/post/{postId}
      */
-    // - Ovaj endpoint nije za javnu upotrebu, koristi se samo unutar sistema kada se briše objava, da bi se obrisali svi lajkovi vezani za tu objavu.
-     
     @DeleteMapping("/internal/post/{postId}")
     public ResponseEntity<Void> deleteAllByPost(@PathVariable Long postId) {
         likeService.deleteAllByPostId(postId);

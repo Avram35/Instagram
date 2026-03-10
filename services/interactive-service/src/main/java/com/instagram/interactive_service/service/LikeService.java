@@ -6,6 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -24,19 +29,23 @@ public class LikeService {
     private final LikeRepository likeRepository;
     private final RestTemplate restTemplate;
 
+    @Value("${internal.api.key}")
+    private String internalApiKey;
+
     public LikeService(LikeRepository likeRepository, RestTemplate restTemplate) {
         this.likeRepository = likeRepository;
         this.restTemplate = restTemplate;
     }
 
     /**
-     *Lajkovanje objave. Proveri da li korisnik moze lajkovati (nije blokiran, i ako je profil privatan, da prati vlasnika)
+     * Lajkuj objavu 
      */
     public LikeDto likePost(Long userId, Long postId) {
         if (likeRepository.existsByUserIdAndPostId(userId, postId)) {
             throw new IllegalStateException("Већ сте означили да вам се свиђа ова објава.");
         }
 
+        // Proveri da li korisnik moze da ima interakciju sa objavom 
         checkCanInteract(userId, postId);
 
         Like like = Like.builder()
@@ -46,14 +55,14 @@ public class LikeService {
             .build();
         like = likeRepository.save(like);
 
-        // Notifikacija vlasniku objave o novom lajku
+        // Posalji notifikaciju vlasniku objave 
         sendLikeNotification(userId, postId);
 
         return toDto(like);
     }
 
     /**
-     * Uklanjanje lajka
+     * Ukloni lajk.
      */
     public void unlikePost(Long userId, Long postId) {
         Like like = likeRepository.findByUserIdAndPostId(userId, postId)
@@ -62,20 +71,20 @@ public class LikeService {
     }
 
     /**
-     * Da li je post lajkovan od strane trenutnog korisnika
+     * Provera da li je korisnik lajkovao objavu .
      */
     public boolean hasLiked(Long userId, Long postId) {
         return likeRepository.existsByUserIdAndPostId(userId, postId);
     }
 
     /**
-     * Broj lajkova na objavi. Iskljuci blokirane
+     * Broj lajkova na objavi - ne ubrajaj blokirane korisnike.
      */
     public long getLikesCount(Long postId, Long requesterId) {
         if (requesterId == null) {
             return likeRepository.countByPostId(postId);
         }
-
+        // Filtiriraj blokirane korisnike
         List<Like> likes = likeRepository.findByPostId(postId);
         return likes.stream()
             .filter(l -> !isBlockedEither(requesterId, l.getUserId()))
@@ -83,7 +92,7 @@ public class LikeService {
     }
 
     /**
-     * Lista svih lajkova na objavi
+     * Lista korisnika koji su lajkovali objavu. Ne prikazuje blokirane korisnike.
      */
     public List<LikeDto> getLikes(Long postId) {
         return likeRepository.findByPostId(postId)
@@ -93,14 +102,14 @@ public class LikeService {
     }
 
     /**
-     * Obrisi  sve lajkove na objavi (kada se objava brise)
+     * Obrisi sve lajkove za odredjenu objavu - interno, kada se objava brise.
      */
     @Transactional
     public void deleteAllByPostId(Long postId) {
         likeRepository.deleteByPostId(postId);
     }
 
-    // pomocne metode
+    // ==================== POMOCNE METODE ====================
 
     public Long getUserIdByUsername(String username) {
         try {
@@ -116,19 +125,28 @@ public class LikeService {
     }
 
     /**
-     * Posalji notifikaciju vlasniku objave da je neko lajkovao njegovu objavu
+     * Posalji LIKE obavestenje vlasniku objave.
      */
     private void sendLikeNotification(Long senderId, Long postId) {
         try {
+            // Preuzmi post → userId vlasnika
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> post = restTemplate.getForObject(
+            ResponseEntity<Map> postResponse = restTemplate.exchange(
                 "http://post-service:8086/api/v1/post/internal/" + postId,
+                HttpMethod.GET,
+                entity,
                 Map.class
             );
+            Map<String, Object> post = postResponse.getBody();
             if (post == null) return;
 
             Long ownerId = Long.valueOf(post.get("userId").toString());
 
+            // Ne salji obavestenje samom sebi kada lajkujes svoju objavu
             if (ownerId.equals(senderId)) return;
 
             Map<String, Object> body = new HashMap<>();
@@ -137,9 +155,14 @@ public class LikeService {
             body.put("type", "LIKE");
             body.put("postId", postId);
 
-            restTemplate.postForObject(
+            HttpHeaders notifHeaders = new HttpHeaders();
+            notifHeaders.set("X-Internal-Api-Key", internalApiKey);
+            notifHeaders.set("Content-Type", "application/json");
+            HttpEntity<Map<String, Object>> notifEntity = new HttpEntity<>(body, notifHeaders);
+
+            restTemplate.postForEntity(
                 "http://follow-service:8083/api/v1/follow/notifications/internal",
-                body,
+                notifEntity,
                 Void.class
             );
         } catch (Exception e) {
@@ -147,34 +170,48 @@ public class LikeService {
         }
     }
 
-    // Proveri da li korisnik moze lajkovati (nije blokiran, i ako je profil privatan, da prati vlasnika)
     private void checkCanInteract(Long userId, Long postId) {
         try {
+            // Preuzmi post → userId vlasnika
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> post = restTemplate.getForObject(
+            ResponseEntity<Map> postResponse = restTemplate.exchange(
                 "http://post-service:8086/api/v1/post/internal/" + postId,
+                HttpMethod.GET,
+                entity,
                 Map.class
             );
+            Map<String, Object> post = postResponse.getBody();
             if (post == null) throw new RuntimeException("Објава није пронађена.");
 
             Long ownerId = Long.valueOf(post.get("userId").toString());
 
+            // Ako je vlasnik, dozvoljava 
             if (ownerId.equals(userId)) return;
 
+            // Provera blokade - ako je bilo koja strana blokirala drugu, ne dozvoljava interakciju
             if (isBlockedEither(userId, ownerId)) {
                 throw new IllegalArgumentException("Не можете интераговати са овом објавом.");
             }
 
+            // Provera da li je profil privatan 
             UserProfileDto owner = restTemplate.getForObject(
                 "http://user-service:8082/api/v1/user/id/" + ownerId,
                 UserProfileDto.class
             );
             if (owner != null && Boolean.TRUE.equals(owner.getPrivateProfile())) {
+                // Proveri da li prati 
                 @SuppressWarnings("unchecked")
-                Map<String, Object> followCheck = restTemplate.getForObject(
+                ResponseEntity<Map> followResponse = restTemplate.exchange(
                     "http://follow-service:8083/api/v1/follow/check-internal/" + userId + "/" + ownerId,
+                    HttpMethod.GET,
+                    entity,
                     Map.class
                 );
+                Map<String, Object> followCheck = followResponse.getBody();
                 boolean isFollowing = followCheck != null && Boolean.TRUE.equals(followCheck.get("following"));
                 if (!isFollowing) {
                     throw new IllegalArgumentException("Морате пратити овог корисника да бисте интераговали.");
@@ -189,11 +226,18 @@ public class LikeService {
 
     private boolean isBlockedEither(Long userId1, Long userId2) {
         try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> res = restTemplate.getForObject(
+            ResponseEntity<Map> response = restTemplate.exchange(
                 "http://blok-service:8084/api/v1/block/check-either/" + userId1 + "/" + userId2,
+                HttpMethod.GET,
+                entity,
                 Map.class
             );
+            Map<String, Object> res = response.getBody();
             return res != null && Boolean.TRUE.equals(res.get("blocked"));
         } catch (Exception e) {
             return false;

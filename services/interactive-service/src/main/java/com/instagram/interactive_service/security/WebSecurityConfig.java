@@ -52,13 +52,14 @@ public class WebSecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Јавни GET — број лајкова/коментара
+                .requestMatchers("/actuator/health").permitAll()
+                // Javni GET - svi mogu da vide broj lajkova i komentara, ali ne i ko je lajkovao/komentarisao
                 .requestMatchers(HttpMethod.GET, "/api/v1/like/count/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/comment/count/**").permitAll()
-                // Интерни — брисање при брисању објаве
+                // Interni - brisanje pri brisanju objave
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/like/internal/**").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/comment/internal/**").permitAll()
-                // Остало захтева JWT
+                // Ostalo zahteva JWT
                 .anyRequest().authenticated()
             );
         http.addFilterBefore(internalApiKeyFilter(), UsernamePasswordAuthenticationFilter.class);    
