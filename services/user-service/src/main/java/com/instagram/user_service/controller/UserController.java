@@ -53,13 +53,28 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<UserDto>> searchUsers(@RequestParam String query) 
+    public ResponseEntity<List<UserDto>> searchUsers
+    (
+        @RequestParam String query,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) 
     {
         if(query == null || query.trim().length() < 1) 
         {
             return ResponseEntity.badRequest().build();
         }
-        List<UserDto> results = userService.searchUsers(query.trim());
+
+        Long currentUserId = null;
+        if (currentUser != null) 
+        {
+            try {
+                UserDto currentUserDto = userService.getUserByUsername(currentUser.getUsername());
+                currentUserId = currentUserDto.getId();
+            } catch (Exception e) {
+            }
+        }
+
+        List<UserDto> results = userService.searchUsers(query.trim(), currentUserId);
         return ResponseEntity.ok(results);
     }
 
@@ -106,5 +121,4 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Грешка при upload-u слике."));
         }
     }
-
 }

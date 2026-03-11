@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -86,9 +87,13 @@ public class UserService {
 
     public void deleteUser(Long id) 
     {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Корисник није пронађен.");
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
+
+        if (user.getProfilePictureUrl() != null) 
+        {
+            deleteOldPicture(user.getProfilePictureUrl());
         }
+
         userRepository.deleteById(id);
     }
 
@@ -110,7 +115,7 @@ public class UserService {
 
             if(newUsername.length() < 1) 
             {
-                throw new IllegalArgumentException("Корисничко мора имати најмање 1 карактер.");
+                throw new IllegalArgumentException("Корисничко име мора имати најмање 1 карактер.");
             }
 
             if(newUsername.length() > 30) 
@@ -302,13 +307,45 @@ public class UserService {
         }
     }
 
-    public List<UserDto> searchUsers(String query) 
+    public List<UserDto> searchUsers(String query, Long currentUserId) 
     {
-        return userRepository
+        List<UserDto> results = userRepository
             .findByUsernameContainingIgnoreCaseOrFnameContainingIgnoreCaseOrLnameContainingIgnoreCase(query, query, query)
             .stream()
             .map(this::toDto)
             .collect(Collectors.toList());
+
+        if (currentUserId != null) 
+        {
+            results = results.stream()
+                .filter(user -> !user.getId().equals(currentUserId))
+                .filter(user -> !isBlockedEitherWay(currentUserId, user.getId()))
+                .collect(Collectors.toList());
+        }
+
+        return results;
+    }
+    
+    private boolean isBlockedEitherWay(Long userId1, Long userId2) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "http://blok-service:8084/api/v1/block/internal/check-either/" + userId1 + "/" + userId2,
+                HttpMethod.GET,
+                entity,
+                (Class<Map<String, Object>>) (Class<?>) Map.class
+            );
+
+            return response.getBody() != null 
+                && Boolean.TRUE.equals(response.getBody().get("blocked"));
+        } catch (Exception e) {
+            log.warn("Блок сервис недоступан при претрази: {}", e.getMessage());
+            return false;
+        }
     }
 
     public List<UserDto> getAllUsers() 
