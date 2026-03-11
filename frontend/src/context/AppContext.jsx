@@ -1,61 +1,46 @@
 import { createContext, useEffect, useState } from "react";
 
-export const AppContext = createContext();
+import { fetchProfileInfo } from "../api/userApi";
+import { signin, signup } from "../api/authApi";
 
-const API_URL = "http://localhost:8081/api/v1/auth";
-const USER_API_URL = "http://localhost:8082/api/v1/user";
+export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [onPostCreated, setOnPostCreated] = useState(null);
 
   const login = async (usernameOrEmail, password) => {
     try {
-      const response = await fetch(`${API_URL}/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernameOrEmail, password }),
-      });
+      const { data, ok } = await signin(usernameOrEmail, password);
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (ok) {
         localStorage.setItem("token", data.token);
 
-        // const userData = data.user || { username: usernameOrEmail };
-        const userResponse = await fetch(`${USER_API_URL}/${usernameOrEmail}`, {
-          headers: {
-            Authorization: `Bearer ${data.token}`,
-          },
-        });
-        const userData = await userResponse.json();
-
+        const userData = await fetchProfileInfo(data.username);
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
-
         return { success: true, message: "Успешна пријава!" };
       } else {
         return { success: false, message: data.error };
       }
     } catch (error) {
       console.error("Login error:", error);
-      return {
-        success: false,
-        message: "Грешка при повезивању са сервером",
-      };
+      return { success: false, message: "Грешка при повезивању са сервером" };
     }
   };
 
   const register = async (fname, lname, username, email, password) => {
     try {
-      const response = await fetch(`${API_URL}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fname, lname, username, email, password }),
-      });
+      const { data, ok } = await signup(
+        fname,
+        lname,
+        username,
+        email,
+        password,
+      );
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (ok) {
         return await login(username, password);
       } else {
         if (data.error) {
@@ -67,10 +52,7 @@ const AppContextProvider = (props) => {
       }
     } catch (error) {
       console.error("Register error:", error);
-      return {
-        success: false,
-        message: "Грешка при повезивању са сервером",
-      };
+      return { success: false, message: "Грешка при повезивању са сервером" };
     }
   };
 
@@ -89,8 +71,33 @@ const AppContextProvider = (props) => {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+      fetchProfileInfo(parsed.username)
+        .then((freshUser) => {
+          if (!freshUser || !freshUser.username) {
+            setUser(null);
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            return;
+          }
+          setUser(freshUser);
+          localStorage.setItem("user", JSON.stringify(freshUser));
+        })
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener("unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("unauthorized", handleUnauthorized);
   }, []);
 
   const value = {
@@ -99,6 +106,9 @@ const AppContextProvider = (props) => {
     register,
     logout,
     updateUser,
+    loading,
+    onPostCreated,
+    setOnPostCreated,
   };
 
   return (

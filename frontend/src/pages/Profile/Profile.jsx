@@ -7,9 +7,15 @@ import SinglePost from "../../components/SinglePost/SinglePost";
 import { AppContext } from "../../context/AppContext";
 import FollowersModal from "../../components/FollowersModal/FollowersModal";
 
-const USER_API_URL = "http://localhost:8082/api/v1/user";
-const FOLLOW_API_URL = "http://localhost:8083/api/v1/follow";
-const POST_API_URL = "http://localhost:8086/api/v1/post";
+import { fetchProfileInfo, getUserAvatarUrl } from "../../api/userApi";
+import {
+  fetchFollowCount,
+  checkFollow,
+  toggleFollow,
+} from "../../api/followApi";
+import { fetchPosts, fetchPostCount, getPostMediaUrl } from "../../api/postApi";
+import { checkBlock, toggleBlock } from "../../api/blockApi";
+import CustomConfirm from "../../components/CustomConfirm/CustomConfirm";
 
 const Profile = () => {
   const { username } = useParams();
@@ -17,7 +23,7 @@ const Profile = () => {
   const [singlePost, setSinglePost] = useState(false);
   const singlePostRef = useRef(null);
   const [postId, setPostId] = useState();
-  const { user } = useContext(AppContext);
+  const { user, setOnPostCreated } = useContext(AppContext);
   const navigate = useNavigate();
   const [followCount, setFollowCount] = useState(null);
   const [posts, setPosts] = useState(null);
@@ -28,98 +34,148 @@ const Profile = () => {
   const [followersModal, setFollowersModal] = useState(false);
   const followersModalRef = useRef(null);
   const [followersFollowing, setFollowersFollowing] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockChecked, setBlockChecked] = useState(false);
+  const [confirm, setConfirm] = useState(null);
 
-  const fetchProfileInfo = async () => {
+  const formatPost = (count) => {
+    const last2 = count % 100;
+    const last1 = count % 10;
+    if (last2 >= 11 && last2 <= 14) return `${count} објава`;
+    if (last1 === 1) return `${count} објава`;
+    if (last1 >= 2 && last1 <= 4) return `${count} објаве`;
+    return `${count} објава`;
+  };
+
+  const formatFollowers = (count) => {
+    const last2 = count % 100;
+    const last1 = count % 10;
+    if (last2 >= 11 && last2 <= 14) return `${count} пратилаца`;
+    if (last1 === 1) return `${count} пратилац`;
+    if (last1 >= 2 && last1 <= 4) return `${count} пратиоца`;
+    return `${count} пратилаца`;
+  };
+
+  const renderPostThumbnail = (post, index) => {
+    const isVideo = post.media[0].mediaUrl.match(/\.(mp4|mov|avi|webm)$/i);
+    return (
+      <div
+        key={index}
+        className="post_thumbnail_wrapper"
+        onClick={() => {
+          setSinglePost(true);
+          setPostInfo(post);
+        }}
+      >
+        {isVideo ? (
+          <video src={getPostMediaUrl(post.media[0].mediaUrl)} />
+        ) : (
+          <img src={getPostMediaUrl(post.media[0].mediaUrl)} alt="" />
+        )}
+        {post.media.length > 1 && (
+          <img src={assets.more_media} alt="" className="multi_media_icon" />
+        )}
+      </div>
+    );
+  };
+
+  const loadProfileInfo = async () => {
+    setPosts(null);
+    setIsBlocked(false);
+    setIsFollowing(false);
+    setIsPending(false);
+    setBlockChecked(false);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${USER_API_URL}/${username}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
+      const data = await fetchProfileInfo(username);
       setProfileInfo(data);
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
   };
 
-  const fetchFollowCount = async () => {
+  const loadFollowCount = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${FOLLOW_API_URL}/${profileInfo.id}/count`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      const data = await response.json();
+      const data = await fetchFollowCount(profileInfo.id);
       setFollowCount(data);
     } catch (error) {
       console.error("Error fetching follow count:", error);
     }
   };
 
-  const fetchPosts = async () => {
+  const loadPosts = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${POST_API_URL}/user/${profileInfo.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
+      const data = await fetchPosts(profileInfo.id);
       setPosts(data);
     } catch (error) {
       console.error("Error fetching posts: ", error);
     }
   };
 
-  const fetchPostCount = async () => {
+  const loadPostCount = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${POST_API_URL}/count/${profileInfo.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
+      const data = await fetchPostCount(profileInfo.id);
       setPostCount(data.count ?? 0);
     } catch (error) {
       console.error("Error fetching post count:", error);
     }
   };
 
-  const checkFollow = async () => {
+  const loadCheckFollow = async () => {
     if (!profileInfo?.id) return;
     try {
-      const token = localStorage.getItem("token");
-
-      const [followRes, pendingRes] = await Promise.all([
-        fetch(`${FOLLOW_API_URL}/check/${profileInfo.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${FOLLOW_API_URL}/requests/check/${profileInfo.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-
-      const followData = await followRes.json();
-      const pendingData = await pendingRes.json();
-
-      setIsFollowing(followData.following);
-      setIsPending(pendingData.pending);
+      const { following, pending } = await checkFollow(profileInfo.id);
+      setIsFollowing(following);
+      setIsPending(pending);
     } catch (error) {
       console.error("Error checking follow:", error);
     }
   };
 
+  const loadCheckBlock = async () => {
+    if (!profileInfo?.id) return;
+    try {
+      const data = await checkBlock(profileInfo.id);
+      setIsBlocked(data.blocked);
+      setBlockChecked(true);
+    } catch (error) {
+      console.error("Error checking block:", error);
+      setBlockChecked(true);
+    }
+  };
+
+  const handleBlock = async () => {
+    const action = isBlocked ? "одблокирате" : "блокирате";
+    const confirmed = await new Promise((resolve) =>
+      setConfirm({
+        message: `Да ли сте сигурни да желите да ${action} корисника ${profileInfo.username}?`,
+        resolve,
+      }),
+    );
+    if (!confirmed) return;
+    try {
+      await toggleBlock(profileInfo.id, isBlocked);
+      const newBlocked = !isBlocked;
+      setIsBlocked(newBlocked);
+      setShowMenu(false);
+      if (!newBlocked) {
+        loadPosts();
+      } else {
+        setPosts(null);
+      }
+    } catch (error) {
+      console.error("Error blocking/unblocking:", error);
+    }
+  };
+
   const handleFollow = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const method = isFollowing || isPending ? "DELETE" : "POST";
-
-      const response = await fetch(`${FOLLOW_API_URL}/${profileInfo.id}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await response.json();
-
+      const { data, method } = await toggleFollow(
+        profileInfo.id,
+        isFollowing,
+        isPending,
+      );
       if (method === "DELETE") {
         setIsFollowing(false);
         setIsPending(false);
@@ -135,39 +191,76 @@ const Profile = () => {
           setIsPending(false);
         }
       }
-
-      fetchFollowCount();
+      loadFollowCount();
     } catch (error) {
       console.error("Error following/unfollowing:", error);
     }
   };
 
   useEffect(() => {
-    fetchProfileInfo();
+    loadProfileInfo();
   }, [username]);
 
   useEffect(() => {
     if (!profileInfo) return;
-    fetchFollowCount();
-    fetchPosts();
-    fetchPostCount();
+    loadFollowCount();
+    loadPostCount();
     if (user.username !== username) {
-      checkFollow();
+      const init = async () => {
+        const followData = await checkFollow(profileInfo.id);
+        setIsFollowing(followData.following);
+        setIsPending(followData.pending);
+
+        const blockData = await checkBlock(profileInfo.id);
+        setIsBlocked(blockData.blocked);
+        setBlockChecked(true);
+
+        if (
+          !blockData.blocked &&
+          (!profileInfo.privateProfile || followData.following)
+        ) {
+          await loadPosts();
+        }
+      };
+      init();
+    } else {
+      loadPosts();
     }
   }, [profileInfo]);
 
   useEffect(() => {
     const handleClick = (e) => {
-      if (singlePost && !singlePostRef.current.contains(e.target)) {
+      if (
+        singlePost &&
+        singlePostRef.current &&
+        !singlePostRef.current.contains(e.target)
+      ) {
         setSinglePost(false);
       }
-      if (followersModal && !followersModalRef.current.contains(e.target)) {
+      if (
+        followersModal &&
+        followersModalRef.current &&
+        !followersModalRef.current.contains(e.target)
+      ) {
         setFollowersModal(false);
+      }
+      if (showMenu && menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [singlePost, followersModal]);
+  }, [singlePost, followersModal, showMenu]);
+
+  useEffect(() => {
+    if (user.username === username) {
+      setOnPostCreated(() => () => {
+        loadPosts();
+        loadPostCount();
+      });
+      return () => setOnPostCreated(null);
+    }
+  }, [profileInfo]);
 
   return (
     <div>
@@ -176,17 +269,40 @@ const Profile = () => {
           <div className="profile_top">
             <div className="profile_info_div">
               <img
-                src={profileInfo.profilePictureUrl || assets.noProfilePic}
+                src={getUserAvatarUrl(
+                  profileInfo.profilePictureUrl,
+                  assets.noProfilePic,
+                )}
                 alt=""
               />
               <div className="profile_info">
-                <span className="username">{profileInfo.username}</span>
+                <div className="username_row">
+                  <span className="username">{profileInfo.username}</span>
+                  {user.username !== username && (
+                    <div className="post_menu_wrapper" ref={menuRef}>
+                      <img
+                        src={assets.more}
+                        alt=""
+                        className="img_more"
+                        onClick={() => setShowMenu((prev) => !prev)}
+                      />
+                      {showMenu && (
+                        <div className="post_menu">
+                          <span className="delete_option" onClick={handleBlock}>
+                            {isBlocked ? "Одблокирај" : "Блокирај"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <span className="name">
                   {profileInfo.fname} {profileInfo.lname}
                 </span>
                 <div className="followers">
                   <span>
-                    <span className="number">{postCount}</span> објава
+                    <span className="number">{postCount}</span>{" "}
+                    {formatPost(postCount).replace(postCount, "").trim()}
                   </span>
                   <span
                     onClick={() => {
@@ -204,7 +320,9 @@ const Profile = () => {
                     <span className="number">
                       {followCount?.followersCount ?? 0}
                     </span>{" "}
-                    пратилаца
+                    {formatFollowers(followCount?.followersCount ?? 0)
+                      .replace(followCount?.followersCount ?? 0, "")
+                      .trim()}
                   </span>
                   <span
                     onClick={() => {
@@ -236,6 +354,10 @@ const Profile = () => {
               >
                 Измените профил
               </button>
+            ) : isBlocked ? (
+              <button className="edit_profile_button" disabled>
+                Блокиран корисник
+              </button>
             ) : (
               <button
                 className={
@@ -257,16 +379,7 @@ const Profile = () => {
           {user.username === username ? (
             posts && posts.length > 0 ? (
               <div className="profile_bottom">
-                {posts.map((post, index) => (
-                  <img
-                    src={`http://localhost:8086${post.media[0].mediaUrl}`}
-                    key={index}
-                    onClick={() => {
-                      setSinglePost(true);
-                      setPostInfo(post);
-                    }}
-                  />
-                ))}
+                {posts.map((post, index) => renderPostThumbnail(post, index))}
               </div>
             ) : (
               <div className="no_pictures_div">
@@ -275,7 +388,7 @@ const Profile = () => {
                 <p>Кад поделите фотографије, приказаће се на вашем профилу.</p>
               </div>
             )
-          ) : profileInfo.privateProfile ? (
+          ) : isBlocked ? null : profileInfo.privateProfile && !isFollowing ? (
             <div className="no_pictures_div">
               <img src={assets.instagramPhoto} alt="" />
               <h2>Овај налог је приватан</h2>
@@ -283,28 +396,21 @@ const Profile = () => {
                 Пратите овај налог да бисте видели фотографије и видео запусе.
               </p>
             </div>
-          ) : posts && posts.length > 0 ? (
+          ) : posts?.length > 0 ? (
             <div className="profile_bottom">
-              {posts.map((post, index) => (
-                <img
-                  src={`http://localhost:8086${post.media[0].mediaUrl}`}
-                  key={index}
-                  onClick={() => {
-                    setSinglePost(true);
-                    setPostInfo(post);
-                  }}
-                />
-              ))}
+              {posts.map((post, index) => renderPostThumbnail(post, index))}
             </div>
-          ) : (
+          ) : posts?.length === 0 ? (
             <div className="no_pictures_yet_div">
               <img src={assets.instagramPhoto} alt="" />
               <h2>Још нема објава</h2>
             </div>
-          )}
+          ) : null}
         </div>
       ) : (
-        <h1>Loading...</h1>
+        <div className="loading_screen">
+          <p>Учитава се...</p>
+        </div>
       )}
 
       {singlePost && (
@@ -322,6 +428,7 @@ const Profile = () => {
                 prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)),
               );
             }}
+            onClose={() => setSinglePost(false)}
           />
         </div>
       )}
@@ -336,6 +443,19 @@ const Profile = () => {
             onClose={() => setFollowersModal(false)}
           />
         </div>
+      )}
+      {confirm && (
+        <CustomConfirm
+          message={confirm.message}
+          onConfirm={() => {
+            confirm.resolve(true);
+            setConfirm(null);
+          }}
+          onCancel={() => {
+            confirm.resolve(false);
+            setConfirm(null);
+          }}
+        />
       )}
     </div>
   );

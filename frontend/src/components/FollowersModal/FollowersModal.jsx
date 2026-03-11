@@ -2,8 +2,13 @@ import React, { useEffect, useState, useContext } from "react";
 import "./FollowersModal.css";
 import { AppContext } from "../../context/AppContext";
 import FollowerRow from "../FollowerRow/FollowerRow";
-
-const FOLLOW_API_URL = "http://localhost:8083/api/v1/follow";
+import {
+  checkFollow,
+  fetchFollowers,
+  fetchFollowing,
+  removeFollower,
+  toggleFollow,
+} from "../../api/followApi";
 
 const FollowersModal = ({
   followersModalRef,
@@ -19,18 +24,12 @@ const FollowersModal = ({
   useEffect(() => {
     if (!profileUserId) return;
 
-    const fetchList = async () => {
+    const loadList = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const endpoint =
+        const data =
           followersFollowing === "Пратиоци"
-            ? `${FOLLOW_API_URL}/${profileUserId}/followers`
-            : `${FOLLOW_API_URL}/${profileUserId}/following`;
-
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
+            ? await fetchFollowers(profileUserId)
+            : await fetchFollowing(profileUserId);
         setList(data);
 
         const map = {};
@@ -41,11 +40,7 @@ const FollowersModal = ({
                 ? item.followerId
                 : item.followingId;
             try {
-              const checkRes = await fetch(
-                `${FOLLOW_API_URL}/check-internal/${user.id}/${otherId}`,
-                { headers: { Authorization: `Bearer ${token}` } },
-              );
-              const checkData = await checkRes.json();
+              const checkData = await checkFollow(otherId);
               map[Number(otherId)] = checkData.following;
             } catch {
               map[Number(otherId)] = false;
@@ -58,18 +53,17 @@ const FollowersModal = ({
       }
     };
 
-    fetchList();
+    loadList();
   }, [profileUserId, followersFollowing]);
 
   const handleFollow = async (otherId) => {
     try {
-      const token = localStorage.getItem("token");
-      const isFollowing = followingMap[Number(otherId)];
-      await fetch(`${FOLLOW_API_URL}/${otherId}`, {
-        method: isFollowing ? "DELETE" : "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setFollowingMap((prev) => ({ ...prev, [Number(otherId)]: !isFollowing }));
+      const isFollowingNow = followingMap[Number(otherId)];
+      await toggleFollow(otherId, isFollowingNow, false);
+      setFollowingMap((prev) => ({
+        ...prev,
+        [Number(otherId)]: !isFollowingNow,
+      }));
     } catch (error) {
       console.error("Error follow/unfollow:", error);
     }
@@ -77,11 +71,7 @@ const FollowersModal = ({
 
   const handleRemove = async (followerId) => {
     try {
-      const token = localStorage.getItem("token");
-      await fetch(`${FOLLOW_API_URL}/remove/${followerId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await removeFollower(followerId);
       setList((prev) => prev.filter((item) => item.followerId !== followerId));
     } catch (error) {
       console.error("Error removing follower:", error);

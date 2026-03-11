@@ -19,6 +19,8 @@ import chat from "./chat.png";
 import instagramPhoto from "./instagram_photo.png";
 import more from "./more.png";
 import close from "./close.png";
+import like from "./like.png";
+import more_media from "./video.png";
 
 export const assets = {
   logo,
@@ -42,4 +44,6 @@ export const assets = {
   instagramPhoto,
   more,
   close,
+  like,
+  more_media,
 };

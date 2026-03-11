@@ -1,34 +1,29 @@
 import React, { useEffect, useState } from "react";
 import "./Notification.css";
 import NotificationItem from "../NotificationItem/NotificationItem";
-
-const FOLLOW_API_URL = "http://localhost:8083/api/v1/follow";
-const USER_API_URL = "http://localhost:8082/api/v1/user/id";
+import {
+  fetchPendingRequests,
+  fetchNotifications,
+  acceptFollowRequest,
+  rejectFollowRequest,
+} from "../../api/followApi";
+import { fetchUserById } from "../../api/userApi";
 
 const Notification = ({ setSearchNotification }) => {
   const [requests, setRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  const fetchAll = async () => {
+  const loadAll = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const [pendingRes, notifRes] = await Promise.all([
-        fetch(`${FOLLOW_API_URL}/requests/pending`, { headers }),
-        fetch(`${FOLLOW_API_URL}/notifications`, { headers }),
+      const [pending, notifs] = await Promise.all([
+        fetchPendingRequests(),
+        fetchNotifications(),
       ]);
-
-      const pending = await pendingRes.json();
-      const notifs = await notifRes.json();
 
       const enriched = await Promise.all(
         pending.map(async (r) => {
           try {
-            const userRes = await fetch(`${USER_API_URL}/${r.senderId}`, {
-              headers,
-            });
-            const userData = await userRes.json();
+            const userData = await fetchUserById(r.senderId);
             return {
               ...r,
               type: "request",
@@ -53,18 +48,9 @@ const Notification = ({ setSearchNotification }) => {
 
   const handleAccept = async (requestId) => {
     try {
-      const token = localStorage.getItem("token");
-      await fetch(`${FOLLOW_API_URL}/requests/${requestId}/accept`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      await acceptFollowRequest(requestId);
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
-
-      const res = await fetch(`${FOLLOW_API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const notifs = await res.json();
+      const notifs = await fetchNotifications();
       setNotifications(notifs);
     } catch (error) {
       console.error("Error accepting request:", error);
@@ -73,11 +59,7 @@ const Notification = ({ setSearchNotification }) => {
 
   const handleReject = async (requestId) => {
     try {
-      const token = localStorage.getItem("token");
-      await fetch(`${FOLLOW_API_URL}/requests/${requestId}/reject`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await rejectFollowRequest(requestId);
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
     } catch (error) {
       console.error("Error rejecting request:", error);
@@ -85,7 +67,7 @@ const Notification = ({ setSearchNotification }) => {
   };
 
   useEffect(() => {
-    fetchAll();
+    loadAll();
   }, []);
 
   const allItems = [...requests, ...notifications];

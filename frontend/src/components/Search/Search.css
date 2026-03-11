@@ -45,6 +45,8 @@
 }
 .search_profile img {
   width: 40px;
+  height: 40px;
+  object-fit: cover;
   border-radius: 50%;
 }
 .search_profile_info {

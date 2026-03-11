@@ -1,16 +1,26 @@
-import React, { useContext, useState } from "react";
+import { useState } from "react";
 import "./EditProfile.css";
 import { AppContext } from "../../context/AppContext";
 import { assets } from "../../assets/assets";
 import { useNavigate } from "react-router-dom";
-
-const USER_API_URL = "http://localhost:8082/api/v1/user";
+import { useContext } from "react";
+import {
+  fetchProfileInfo,
+  getUserAvatarUrl,
+  updateProfile,
+  updateProfilePicture,
+} from "../../api/userApi";
+import { deleteAccount } from "../../api/authApi";
+import CustomAlert from "../../components/CustomAlert/CustomAlert";
+import CustomConfirm from "../../components/CustomConfirm/CustomConfirm";
 
 const EditProfile = () => {
-  const { user, updateUser } = useContext(AppContext);
+  const { user, updateUser, logout } = useContext(AppContext);
 
   const [selectedImage, setSelectedImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState(
+    getUserAvatarUrl(user.profilePictureUrl, null),
+  );
   const [bio, setBio] = useState(user.bio || "");
   const [fname, setFname] = useState(user.fname || "");
   const [lname, setLname] = useState(user.lname || "");
@@ -18,14 +28,15 @@ const EditProfile = () => {
   const [privateProfile, setPrivateProfile] = useState(
     user.privateProfile || false,
   );
+  const [alert, setAlert] = useState(null);
+  const [confirm, setConfirm] = useState(null);
   const navigate = useNavigate();
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-
     if (file) {
       if (file.size > 50 * 1024 * 1024) {
-        alert("Фајл не сме бити већи од 50MB!");
+        setAlert({ message: "Фајл не сме бити већи од 50MB!", type: "error" });
         return;
       }
       setSelectedImage(file);
@@ -35,49 +46,63 @@ const EditProfile = () => {
 
   const handleOnSubmit = async (e) => {
     e.preventDefault();
-
-    const token = localStorage.getItem("token");
-
     try {
-      const response = await fetch(`${USER_API_URL}/${user.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          fname: fname,
-          lname: lname,
-          username: username,
-          bio: bio,
-          privateProfile: privateProfile,
-        }),
+      const response = await updateProfile(user.id, {
+        fname,
+        lname,
+        username,
+        bio,
+        privateProfile,
       });
 
       if (response.ok) {
         if (selectedImage) {
-          const formData = new FormData();
-          formData.append("file", selectedImage);
-
-          await fetch(`${USER_API_URL}/${user.id}/profile-pic`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
+          await updateProfilePicture(selectedImage);
         }
 
-        updateUser({ fname, lname, username, bio, privateProfile });
-        alert("Профил успешно ажуриран!");
-        navigate(`/profile/${username}`);
+        if (username !== user.username) {
+          setAlert({
+            message: "Корисничко ime је промењено. Бићете одјављени!",
+            type: "success",
+          });
+          setTimeout(() => {
+            logout();
+            navigate("/login");
+          }, 2000);
+          return;
+        }
+
+        const freshUser = await fetchProfileInfo(username);
+        updateUser(freshUser);
+        setAlert({ message: "Профил успешно ажуриран!", type: "success" });
+        setTimeout(() => navigate(`/profile/${username}`), 3000);
       } else {
-        alert("Грешка при ажурирању профила!");
+        setAlert({ message: "Грешка при ажурирању профила!", type: "error" });
       }
     } catch (error) {
       console.error("Update error:", error);
     }
   };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = await new Promise((resolve) =>
+      setConfirm({
+        message: "Да ли сте сигурни да желите да обришете налог?",
+        resolve,
+      }),
+    );
+    if (!confirmed) return;
+    try {
+      const response = await deleteAccount();
+      if (response.ok) {
+        logout();
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Delete account error:", error);
+    }
+  };
+
   return (
     <form className="edit-profile-div" onSubmit={handleOnSubmit}>
       <div className="edit-profile-container">
@@ -112,7 +137,7 @@ const EditProfile = () => {
         <div className="edit-fname">
           <h3 className="title-bio">Име</h3>
           <input
-            placeholder="Име"
+            placeholder="Ime"
             onChange={(e) => setFname(e.target.value)}
             value={fname}
             className="edit-input"
@@ -128,9 +153,9 @@ const EditProfile = () => {
           />
         </div>
         <div className="edit-username">
-          <h3 className="title-bio">Корисничко име</h3>
+          <h3 className="title-bio">Корисничко ime</h3>
           <input
-            placeholder="Корисничко име"
+            placeholder="Корисничко ime"
             onChange={(e) => setUsername(e.target.value)}
             value={username}
             className="edit-input"
@@ -151,7 +176,36 @@ const EditProfile = () => {
         <button className="edit-send-btn" type="submit">
           Пошаљи
         </button>
+        <button
+          type="button"
+          className="delete-account-btn"
+          onClick={handleDeleteAccount}
+        >
+          Обришите налог
+        </button>
       </div>
+
+      {confirm && (
+        <CustomConfirm
+          message={confirm.message}
+          onConfirm={() => {
+            confirm.resolve(true);
+            setConfirm(null);
+          }}
+          onCancel={() => {
+            confirm.resolve(false);
+            setConfirm(null);
+          }}
+        />
+      )}
+
+      {alert && (
+        <CustomAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
     </form>
   );
 };

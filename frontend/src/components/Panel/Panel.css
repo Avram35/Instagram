@@ -9,7 +9,7 @@
   border-top-right-radius: 15px;
   z-index: 10;
   box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15);
-
+  pointer-events: none;
   transform: translateX(-200px);
   opacity: 0;
   transition: all 0.3s ease;
@@ -17,4 +17,5 @@
 .panel.show {
   transform: translateX(0);
   opacity: 1;
+  pointer-events: all;
 }
