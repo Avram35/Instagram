@@ -54,7 +54,7 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Други сервиси позивају check-either без JWT
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/block/check-either/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/block/internal/check-either/**").permitAll()
                 // Све остало захтева JWT
                 .anyRequest().authenticated()
             );

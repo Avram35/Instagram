@@ -66,8 +66,7 @@ public class BlockController {
         return ResponseEntity.ok(Map.of("blocked", blocked));
     }
 
-    // Interni — pozivaju ga drugi servisi sa X-Internal-Api-Key
-    @GetMapping("/check-either/{userId1}/{userId2}")
+    @GetMapping("/internal/check-either/{userId1}/{userId2}")
     public ResponseEntity<Map<String, Boolean>> isBlockedEitherWay(
         @PathVariable Long userId1,
         @PathVariable Long userId2
@@ -83,8 +82,6 @@ public class BlockController {
         Long currentUserId = blockService.getUserIdByUsername(currentUser.getUsername());
         return ResponseEntity.ok(blockService.getBlockedUsers(currentUserId));
     }
-
-    // ===== DODATO: Interni endpoint za kaskadno brisanje pri brisanju naloga =====
     // Poziva auth-service pri deleteAccount() — brise sve blokove gde je korisnik ucestvovao
     @DeleteMapping("/internal/user/{userId}")
     public ResponseEntity<Void> deleteAllBlocksForUser(@PathVariable Long userId) {
