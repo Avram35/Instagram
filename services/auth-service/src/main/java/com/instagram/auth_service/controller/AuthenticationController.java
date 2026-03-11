@@ -75,7 +75,7 @@ public class AuthenticationController {
             final UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String token = jwtUtil.generateToken(userDetails.getUsername().trim().toLowerCase());
 
-            return ResponseEntity.ok(Map.of("token", token));
+            return ResponseEntity.ok(Map.of("token", token, "username", userDetails.getUsername()));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Подаци које сте унели нису исправни."));
         }
@@ -94,21 +94,28 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Email је већ заузет!"));
         }
 
+        User newUser = new User();
+        newUser.setUsername(user.getUsername().trim().toLowerCase());
+        newUser.setEmail(user.getEmail().trim().toLowerCase());
+        //newUser.setFname(user.getFname().trim());
+        //newUser.setLname(user.getLname().trim());
+        newUser.setPassword(encoder.encode(user.getPassword()));
+
         try {
-            User newUser = new User();
-            newUser.setUsername(user.getUsername().trim().toLowerCase());
-            newUser.setEmail(user.getEmail().trim().toLowerCase());
-            newUser.setFname(user.getFname().trim());
-            newUser.setLname(user.getLname().trim());
-            newUser.setPassword(encoder.encode(user.getPassword()));
-    
             userRepository.save(newUser);
-    
+        } catch (Exception e) {
+            log.error("Greska pri cuvanju u auth bazu: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Регистрација није успела. Покушајте поново."));
+        }
+
+        try {
             Map<String, Object> userProfile = new HashMap<>();
             userProfile.put("id", newUser.getId());
             userProfile.put("username", newUser.getUsername());
-            userProfile.put("fname", newUser.getFname());
-            userProfile.put("lname", newUser.getLname());
+            //userProfile.put("fname", newUser.getFname());
+            //userProfile.put("lname", newUser.getLname());
+            userProfile.put("fname", user.getFname()); 
+            userProfile.put("lname", user.getLname());
     
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Api-Key", internalApiKey);
@@ -122,15 +129,17 @@ public class AuthenticationController {
                 Void.class
             );
         } catch (Exception e) {
+            log.error("User-service nije dostupan: {}", e.getMessage());
+            userRepository.delete(newUser);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", "Регистрација тренутно није могућа. Покушајте поново."));
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Успешно сте се регистровали!"));
     }
+
     @PutMapping("/internal/update-username")
     public ResponseEntity<?> updateUsername(@RequestBody Map<String, String> request) 
     {
-
         String oldUsername = request.get("oldUsername");
         String newUsername = request.get("newUsername");
 
@@ -143,7 +152,6 @@ public class AuthenticationController {
         {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Корисничко име је већ заузето."));
         }
-
 
         User user = userRepository.findByUsernameOrEmail(oldUsername, oldUsername).orElseThrow(() -> new RuntimeException("Корисник није пронађен."));
 
@@ -166,23 +174,50 @@ public class AuthenticationController {
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Internal-Api-Key", internalApiKey);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+            deleteFromService(
+                "http://post-service:8086/api/v1/post/internal/user/" + userId, 
+                entity, "post-service"
+            );
 
-            DeleteUser("http://user-service:8082/internal/api/v1/user/" + userId, entity, "user-service");
+            deleteFromService(
+                "http://interactive-service:8087/api/v1/like/internal/user/" + userId, 
+                entity, "interactive-service"
+            );
+
+            deleteFromService(
+                "http://interactive-service:8087/api/v1/comment/internal/user/" + userId, 
+                entity, "interactive-service"
+            );
+
+            deleteFromService(
+                "http://follow-service:8083/api/v1/follow/internal/user/" + userId, 
+                entity, "follow-service"
+            );
+
+            deleteFromService(
+                "http://blok-service:8084/api/v1/block/internal/user/" + userId, 
+                entity, "blok-service"
+            );
+
+            deleteFromService(
+                "http://user-service:8082/internal/api/v1/user/" + userId, 
+                entity, "user-service"
+            );
 
             userRepository.delete(user);
             return ResponseEntity.ok(Map.of("message", "Налог је успешно обрисан."));
         } catch (Exception e) {
-            return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Брисање налога није успело. Покушајте поново."));
+            log.error("Greska pri brisanju {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Брисање налога није успело. Покушајте поново."));
         }
     }
 
-    private void DeleteUser(String url, HttpEntity<Void> entity, String serviceName) {
+    private void deleteFromService(String url, HttpEntity<Void> entity, String serviceName) {
         try {
             restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+            log.info("Uspesno brisanje {}", serviceName);
         } catch (Exception e) {
-            log.warn("Неуспешно брисање из {}: {}", serviceName, e.getMessage());
+            log.warn("Neuspesno brisanje {}: {}", serviceName, e.getMessage());
         }
     }
 
