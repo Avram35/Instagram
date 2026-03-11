@@ -141,7 +141,7 @@ public class FeedService {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             ResponseEntity<Map> response = restTemplate.exchange(
-                "http://blok-service:8084/api/v1/block/check-either/" + userId1 + "/" + userId2,
+                "http://blok-service:8084/api/v1/block/internal/check-either/" + userId1 + "/" + userId2,
                 HttpMethod.GET,
                 entity,
                 Map.class
