@@ -103,4 +103,12 @@ public class LikeController {
         likeService.deleteAllByPostId(postId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllByUser(@PathVariable Long userId) {
+        likeService.deleteAllByUserId(userId);
+        return ResponseEntity.noContent().build();
+    }
+    // DELETE /api/v1/like/internal/user/{userId} - Interni endpoint koji briše sve lajkove koje je korisnik postavio. 
+    // Koristi se kada se korisnik obriše, da bi se obrisali i svi njegovi lajkovi.
 }

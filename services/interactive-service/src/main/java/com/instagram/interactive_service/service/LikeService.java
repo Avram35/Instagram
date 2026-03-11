@@ -109,6 +109,12 @@ public class LikeService {
         likeRepository.deleteByPostId(postId);
     }
 
+    @Transactional
+    public void deleteAllByUserId(Long userId) {
+        likeRepository.deleteByUserId(userId);
+        log.info("Обрисани сви лајкови за корисника {}", userId);
+    } // DELETE /api/v1/like/internal/user/{userId} - Interni endpoint koji briše sve lajkove koje je korisnik postavio. Koristi se kada se korisnik obriše, da bi se obrisali i svi njegovi lajkovi.
+
     // ==================== POMOCNE METODE ====================
 
     public Long getUserIdByUsername(String username) {
@@ -232,7 +238,7 @@ public class LikeService {
 
             @SuppressWarnings("unchecked")
             ResponseEntity<Map> response = restTemplate.exchange(
-                "http://blok-service:8084/api/v1/block/check-either/" + userId1 + "/" + userId2,
+                "http://blok-service:8084/api/v1/block/internal/check-either/" + userId1 + "/" + userId2,
                 HttpMethod.GET,
                 entity,
                 Map.class

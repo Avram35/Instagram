@@ -116,4 +116,11 @@ public class CommentController {
         commentService.deleteAllByPostId(postId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllByUser(@PathVariable Long userId) {
+        commentService.deleteAllByUserId(userId);
+        return ResponseEntity.noContent().build();
+    } 
+    // DELETE /api/v1/comment/internal/user/{userId} - Interni endpoint koji briše sve komentare koje je korisnik napisao. Koristi se kada se korisnik obriše, da bi se obrisali i svi njegovi komentari.
 }

@@ -84,13 +84,41 @@ public class CommentService {
     }
 
     /**
-     * Obrisi komentar - samo vlasnik komentara.
+     * Obrisi komentar - moze da ga obrise vlasnik komentara i vlasnik objave koja je komentarisana.
      */
     public void deleteComment(Long commentId, Long userId) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new RuntimeException("Коментар није пронађен."));
 
-        if (!comment.getUserId().equals(userId)) {
+        // Vlasnik komentara moze obrisati svoj komentar
+        boolean isCommentOwner = comment.getUserId().equals(userId);
+
+        // Vlasnik objave moze obrisati bilo koji komentar na svojoj objavi
+        boolean isPostOwner = false;
+        if (!isCommentOwner) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("X-Internal-Api-Key", internalApiKey);
+                HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                @SuppressWarnings("unchecked")
+                ResponseEntity<Map> postResponse = restTemplate.exchange(
+                    "http://post-service:8086/api/v1/post/internal/" + comment.getPostId(),
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+                );
+                Map<String, Object> post = postResponse.getBody();
+                if (post != null) {
+                    Long postOwnerId = Long.valueOf(post.get("userId").toString());
+                    isPostOwner = postOwnerId.equals(userId);
+                }
+            } catch (Exception e) {
+                log.warn("Грешка при провери власника објаве: {}", e.getMessage());
+            }
+        }
+
+        if (!isCommentOwner && !isPostOwner) {
             throw new IllegalArgumentException("Немате дозволу за брисање овог коментара.");
         }
 
@@ -134,6 +162,13 @@ public class CommentService {
     public void deleteAllByPostId(Long postId) {
         commentRepository.deleteByPostId(postId);
     }
+
+    @Transactional
+    public void deleteAllByUserId(Long userId) {
+        commentRepository.deleteByUserId(userId);
+        log.info("Обрисани сви коментари за корисника {}", userId);
+    } 
+    // DELETE /api/v1/comment/internal/user/{userId} - Interni endpoint koji briše sve komentare koje je korisnik napisao. Koristi se kada se korisnik obriše, da bi se obrisali i svi njegovi komentari.
 
     // ==================== POMOCNE METODE ====================
 
@@ -252,7 +287,7 @@ public class CommentService {
 
             @SuppressWarnings("unchecked")
             ResponseEntity<Map> response = restTemplate.exchange(
-                "http://blok-service:8084/api/v1/block/check-either/" + userId1 + "/" + userId2,
+                "http://blok-service:8084/api/v1/block/internal/check-either/" + userId1 + "/" + userId2,
                 HttpMethod.GET,
                 entity,
                 Map.class
