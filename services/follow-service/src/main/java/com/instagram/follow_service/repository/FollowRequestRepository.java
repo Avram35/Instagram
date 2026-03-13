@@ -15,4 +15,5 @@ public interface FollowRequestRepository extends JpaRepository<FollowRequest, Lo
     Optional<FollowRequest> findBySenderIdAndReceiverId(Long senderId, Long receiverId);
     List<FollowRequest> findByReceiverIdAndStatus(Long receiverId, RequestStatus status);
     boolean existsBySenderIdAndReceiverId(Long senderId, Long receiverId);
+    void deleteBySenderIdOrReceiverId(Long senderId, Long receiverId);
 }

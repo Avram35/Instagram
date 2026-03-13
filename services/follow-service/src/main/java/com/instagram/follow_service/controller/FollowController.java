@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.instagram.follow_service.dto.FollowCountDto;
+import com.instagram.follow_service.dto.FollowDto;
 import com.instagram.follow_service.dto.FollowRequestDto;
 import com.instagram.follow_service.dto.NotificationDto;
 import com.instagram.follow_service.service.FollowService;
@@ -77,6 +79,24 @@ public class FollowController {
             followService.unfollow(followerId, followingId);
         } catch (Exception e) { /* Ignorisi ako ne prati */ }
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Интерни — обриши све follow податке корисника (кад се налог брише).
+     * DELETE /api/v1/follow/internal/user/{userId}
+     */
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllByUser(@PathVariable Long userId) {
+        followService.deleteAllByUserId(userId);
+        return ResponseEntity.noContent().build();
+    }
+    /**
+     * Интерни — листа ID-jева које корисник прати (за feed-service).
+     * GET /api/v1/follow/internal/{userId}/following
+     */
+    @GetMapping("/internal/{userId}/following")
+    public ResponseEntity<List<FollowDto>> getFollowingInternal(@PathVariable Long userId) {
+        return ResponseEntity.ok(followService.getFollowing(userId));
     }
 
     @PostMapping("/notifications/internal")
@@ -204,5 +224,14 @@ public class FollowController {
     ) {
         Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
         return ResponseEntity.ok(followService.getNotifications(currentUserId));
+    }
+    
+    @PutMapping("/notifications/read-all")
+    public ResponseEntity<Map<String, String>> markAllAsRead(
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        followService.markAllAsRead(currentUserId);
+        return ResponseEntity.ok(Map.of("message", "Сва обавештења означена као прочитана."));
     }
 }
