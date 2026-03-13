@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
         return ResponseEntity
-            .status(HttpStatus.CONTENT_TOO_LARGE)
+            .status(HttpStatus.PAYLOAD_TOO_LARGE)
             .body(Map.of("error", "Фајл прелази максималну дозвољену величину од 50 MB."));
     }
 
