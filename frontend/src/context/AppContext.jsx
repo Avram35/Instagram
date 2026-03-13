@@ -3,6 +3,7 @@ import { createContext, useEffect, useState } from "react";
 export const AppContext = createContext();
 
 const API_URL = "http://localhost:8081/api/v1/auth";
+const USER_API_URL = "http://localhost:8082/api/v1/user";
 
 const AppContextProvider = (props) => {
   const [user, setUser] = useState(null);
@@ -20,7 +21,14 @@ const AppContextProvider = (props) => {
       if (response.ok) {
         localStorage.setItem("token", data.token);
 
-        const userData = data.user || { username: usernameOrEmail };
+        // const userData = data.user || { username: usernameOrEmail };
+        const userResponse = await fetch(`${USER_API_URL}/${usernameOrEmail}`, {
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+        });
+        const userData = await userResponse.json();
+
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
 
@@ -50,7 +58,12 @@ const AppContextProvider = (props) => {
       if (response.ok) {
         return await login(username, password);
       } else {
-        return { success: false, message: data.error };
+        if (data.error) {
+          return { success: false, message: data.error };
+        } else {
+          const firstError = Object.values(data)[0];
+          return { success: false, message: firstError };
+        }
       }
     } catch (error) {
       console.error("Register error:", error);
@@ -67,6 +80,12 @@ const AppContextProvider = (props) => {
     localStorage.removeItem("user");
   };
 
+  const updateUser = (updatedData) => {
+    const newUser = { ...user, ...updatedData };
+    setUser(newUser);
+    localStorage.setItem("user", JSON.stringify(newUser));
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -79,6 +98,7 @@ const AppContextProvider = (props) => {
     login,
     register,
     logout,
+    updateUser,
   };
 
   return (

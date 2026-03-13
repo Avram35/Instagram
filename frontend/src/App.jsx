@@ -7,6 +7,7 @@ import { AppContext } from "./context/AppContext";
 import Login from "./pages/Login/Login";
 import MorePanel from "./components/MorePanel/MorePanel";
 import Panel from "./components/Panel/Panel";
+import EditProfile from "./pages/EditProfile/EditProfile";
 
 const App = () => {
   const { user } = useContext(AppContext);
@@ -29,17 +30,25 @@ const App = () => {
             morePanRef={morePanRef}
           />
           <Panel searchNotification={searchNotification} panRef={panRef} />
-          <MorePanel morePanel={morePanel} morePanRef={morePanRef} />
+          <MorePanel
+            morePanel={morePanel}
+            setMorePanel={setMorePanel}
+            morePanRef={morePanRef}
+          />
         </>
       )}
 
       <Routes>
         <Route path="/" element={user ? <Feed /> : <Navigate to="/login" />} />
         <Route
-          path="/profile/:profileId"
+          path="/profile/:username"
           element={user ? <Profile /> : <Navigate to="/login" />}
         />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        <Route
+          path="/edit-profile"
+          element={user ? <EditProfile /> : <Navigate to="/login" />}
+        />
       </Routes>
     </div>
   );
