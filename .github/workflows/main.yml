@@ -47,11 +47,11 @@ jobs:
       #     chmod +x mvnw
       #     ./mvnw test
 
-      # - name: Run tests - post-service
-      #   working-directory: ./services/post-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - post-service
+        working-directory: ./services/post-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # - name: Run tests - interactive-service
       #   working-directory: ./services/interactive-service
@@ -104,12 +104,12 @@ jobs:
       #     push: true
       #     tags: ${{ secrets.DOCKER_USERNAME }}/feed-service:${{ steps.tag.outputs.TAG }}
 
-      # - name: Build and push post-service
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./services/post-service
-      #     push: true
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/post-service:${{ steps.tag.outputs.TAG }}
+      - name: Build and push post-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/post-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/post-service:${{ steps.tag.outputs.TAG }}
 
       # - name: Build and push interactive-service
       #   uses: docker/build-push-action@v5
