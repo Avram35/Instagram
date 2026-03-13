@@ -1,8 +1,11 @@
 package com.instagram.interactive_service.security;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,6 +30,9 @@ public class WebSecurityConfig {
         return new AuthTokenFilter();
     }
 
+    @Value("${cors.allowed-origins}")
+    private String corsAllowedOrigins;
+
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -39,11 +45,14 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+            List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                                            .map(String::trim)
+                                            .collect(Collectors.toList());
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(request -> {
                 CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOrigins(List.of("http://localhost:5173"));
+                config.setAllowedOriginPatterns(allowedOrigins);
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Internal-Api-Key"));
                 config.setAllowCredentials(true);
@@ -53,7 +62,7 @@ public class WebSecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health").permitAll()
-                // Javni GET - svi mogu da vide broj lajkova i komentara, ali ne i ko je lajkovao/komentarisao
+                // Javni GET — broj lajkova i komentara za objavu
                 .requestMatchers(HttpMethod.GET, "/api/v1/like/count/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/comment/count/**").permitAll()
                 // Interni - brisanje pri brisanju objave
