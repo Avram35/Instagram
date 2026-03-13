@@ -74,11 +74,6 @@ const SinglePost = ({ singlePostRef, postInfo }) => {
 
   return (
     <div className="single_post" ref={singlePostRef}>
-      {/*<img
-        src={`http://localhost:8086${postInfo.media[0].mediaUrl}`}
-        alt=""
-        className="single_post_img"
-      />*/}
       <div className="single_post_img_wrapper">
         <img
           src={`http://localhost:8086${postInfo.media[currentIndex].mediaUrl}`}
