@@ -28,11 +28,41 @@ public class GlobalExceptionHandler {
             .body(Map.of("error", "Подаци које сте унели нису исправни."));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity
+            .badRequest()
+            .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
+        String message = ex.getMessage();
+
+        if (message != null && message.contains("није пронађен")) 
+        {
+            return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", message));
+        }
+
+        if (message != null && (message.contains("није могућа") || message.contains("Покушајте поново"))) 
+        {
+            return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", message));
+        }
+
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(Map.of("error", ex.getMessage()));
+            .body(Map.of("error", "Дошло је до грешке. Покушајте поново."));
     }
 
     @ExceptionHandler(Exception.class)
