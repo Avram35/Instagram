@@ -152,7 +152,6 @@ const SinglePost = ({
             onClick={() =>
               handleDeleteMedia(currentPost.media[currentIndex].id)
             }
-            title="Уклони овај медија"
           >
             ✕
           </button>
