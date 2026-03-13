@@ -23,11 +23,11 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - user-service
-      #   working-directory: ./services/user-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - user-service
+        working-directory: ./services/user-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # - name: Run tests - follow-service
       #   working-directory: ./services/follow-service
