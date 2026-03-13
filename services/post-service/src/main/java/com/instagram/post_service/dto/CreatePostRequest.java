@@ -1,0 +1,12 @@
+package com.instagram.post_service.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreatePostRequest {
+    private String description;
+}
