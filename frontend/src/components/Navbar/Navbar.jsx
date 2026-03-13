@@ -138,11 +138,6 @@ const Navbar = ({
                       : ""
                   : "pretraga";
               });
-              /*if (active === "pretraga") {
-                setActive(isFeed ? "pocetak" : isProfile ? "profil" : "");
-              } else {
-                setActive("pretraga");
-              }*/
 
               if (searchNotification === "pretraga") {
                 setSearchNotification(null);
@@ -178,12 +173,6 @@ const Navbar = ({
                       : ""
                   : "obavestenja",
               );
-              /*if (active === "obavestenja") {
-                setActive(isFeed ? "pocetak" : isProfile ? "profil" : "");
-              } else {
-                setActive("obavestenja");
-              }*/
-
               if (searchNotification === "obavestenja") {
                 setSearchNotification(null);
               } else {
@@ -232,15 +221,7 @@ const Navbar = ({
             <div
               className={`img_wrapper ${active === "profil" ? "active" : ""}`}
             >
-              <img
-                //src={
-                //  user.profilePic === "" ? assets.noProfilePic : user.profilePic
-                //}
-                src={assets.noProfilePic}
-                alt=""
-                className="profile_pic"
-                //style={active === "profil" ? { border: "2px solid black" } : {}}
-              />
+              <img src={assets.noProfilePic} alt="" className="profile_pic" />
             </div>
 
             <span>Профил</span>
