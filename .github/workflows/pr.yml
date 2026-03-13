@@ -35,11 +35,11 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - blok-service
-      #   working-directory: ./services/blok-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - blok-service
+        working-directory: ./services/blok-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # - name: Run tests - feed-service
       #   working-directory: ./services/feed-service

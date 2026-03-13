@@ -35,11 +35,11 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - blok-service
-      #   working-directory: ./services/blok-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - blok-service
+        working-directory: ./services/blok-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # - name: Run tests - feed-service
       #   working-directory: ./services/feed-service
@@ -90,12 +90,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/follow-service:${{ steps.tag.outputs.TAG }}
 
-      # - name: Build and push blok-service
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./services/blok-service
-      #     push: true
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/blok-service:${{ steps.tag.outputs.TAG }}
+      - name: Build and push blok-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/blok-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/blok-service:${{ steps.tag.outputs.TAG }}
 
       # - name: Build and push feed-service
       #   uses: docker/build-push-action@v5
