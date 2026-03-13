@@ -174,7 +174,6 @@ const Navbar = ({
                       : ""
                   : "obavestenja",
               );
-
               if (searchNotification === "obavestenja") {
                 setSearchNotification(null);
               } else {

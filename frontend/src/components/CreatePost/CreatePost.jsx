@@ -131,14 +131,6 @@ const CreatePost = ({ createPostRef, setCreatePost }) => {
                 )}
               </>
             )}
-
-            {/*{previews.map((preview, index) =>
-              preview.type === "image" ? (
-                <img key={index} src={preview.url} />
-              ) : (
-                <video key={index} src={preview.url} controls />
-              ),
-            )}*/}
           </div>
           <textarea
             placeholder="Додајте опис..."
