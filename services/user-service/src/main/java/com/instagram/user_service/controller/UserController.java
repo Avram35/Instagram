@@ -77,12 +77,12 @@ public class UserController {
         List<UserDto> results = userService.searchUsers(query.trim(), currentUserId);
         return ResponseEntity.ok(results);
     }
-
+    /* 
     @GetMapping("/all")
     public ResponseEntity<List<UserDto>> getAllUsers() 
     {
         return ResponseEntity.ok(userService.getAllUsers());
-    }
+    }*/
 
 
     @PutMapping("/{id}")

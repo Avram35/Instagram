@@ -246,14 +246,14 @@ public class UserService {
 
             if(!filePath.startsWith(oldFilePath)) 
             {
-                log.warn("Покушај брисања фајла изван upload директоријума: {}", filePath);
+                log.warn("Pokusaj brisanja fajla izvan upload direktorijuma: {}", filePath);
                 return;
             }
 
             Files.deleteIfExists(filePath);
 
         } catch (IOException e) {
-            log.warn("Неуспешно брисање старе профилне слике: {}", e.getMessage());
+            log.warn("Neuspesno brisanje stare profilne slike: {}", e.getMessage());
         }
     }
 
@@ -284,7 +284,7 @@ public class UserService {
                 Void.class
             );
         } catch (Exception e) {
-            log.error("Неуспешна синхронизација username-а са auth-service: {}", e.getMessage());
+            log.error("Neuspesna sinhronizacija username-a sa auth-service: {}", e.getMessage());
             throw new RuntimeException("Промена корисничког имена тренутно није могућа. Покушајте поново.");
         }
     }
@@ -303,7 +303,7 @@ public class UserService {
                 Void.class
             );
         } catch (Exception e) {
-            log.warn("Грешка при прихватању pending захтева: {}", e.getMessage());
+            log.warn("Greska pri prihvatanju pending zahteva: {}", e.getMessage());
         }
     }
 
@@ -343,18 +343,18 @@ public class UserService {
             return response.getBody() != null 
                 && Boolean.TRUE.equals(response.getBody().get("blocked"));
         } catch (Exception e) {
-            log.warn("Блок сервис недоступан при претрази: {}", e.getMessage());
+            log.warn("Block servis nije dostupan: {}", e.getMessage());
             return false;
         }
     }
-
+    /* 
     public List<UserDto> getAllUsers() 
     {
         return userRepository.findAll()
             .stream()
             .map(this::toDto)
             .collect(Collectors.toList());
-    }
+    }*/
 
     private UserDto toDto(User user) {
         return UserDto.builder()
