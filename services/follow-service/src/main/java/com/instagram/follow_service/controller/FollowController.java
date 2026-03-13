@@ -10,73 +10,66 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import com.instagram.follow_service.dto.FollowCountDto;
+import com.instagram.follow_service.dto.FollowDto;
 import com.instagram.follow_service.dto.FollowRequestDto;
-import com.instagram.follow_service.dto.UserProfileDto;
-import com.instagram.follow_service.repository.FollowRepository;
+import com.instagram.follow_service.dto.NotificationDto;
 import com.instagram.follow_service.service.FollowService;
+
+// ===== ISPRAVKA: Kontroler koristi SAMO FollowService =====
+// Pre: injektovao RestTemplate, FollowRepository, FollowRequestRepository, NotificationRepository
+// Posle: samo FollowService — sva logika je u servisu
 
 @RestController
 @RequestMapping("/api/v1/follow")
 public class FollowController {
 
     private final FollowService followService;
-    private final RestTemplate restTemplate;
-    private final FollowRepository followRepository;
 
-    public FollowController(FollowService followService, RestTemplate restTemplate, FollowRepository followRepository) {
+    public FollowController(FollowService followService) {
         this.followService = followService;
-        this.restTemplate = restTemplate;
-        this.followRepository = followRepository;
     }
 
-    /*
-    Запрати корисника. Ако је приватан — шаље захтев.
-    */
+    // ==================== PRACENJE ====================
+
     @PostMapping("/{userId}")
     public ResponseEntity<Map<String, String>> follow(
         @PathVariable Long userId,
         @AuthenticationPrincipal UserDetails currentUser
     ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-        Map<String, String> result = followService.follow(currentUserId, userId);
-        return ResponseEntity.ok(result);
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        return ResponseEntity.ok(followService.follow(currentUserId, userId));
     }
 
-    /*
-    Отпрати корисника.
-    */
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, String>> unfollow(
         @PathVariable Long userId,
         @AuthenticationPrincipal UserDetails currentUser
     ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
         followService.unfollow(currentUserId, userId);
         return ResponseEntity.ok(Map.of("message", "Успешно сте отпратили корисника."));
     }
 
-    /*
-    Уклони пратиоца (корисник уклања некога ко га прати).
-    */
     @DeleteMapping("/remove/{followerId}")
     public ResponseEntity<Map<String, String>> removeFollower(
         @PathVariable Long followerId,
         @AuthenticationPrincipal UserDetails currentUser
     ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
         followService.removeFollower(currentUserId, followerId);
         return ResponseEntity.ok(Map.of("message", "Пратилац је уклоњен."));
     }
 
-    /*
-    Интерни ендпоинт који се позива из осталих сервиса.
-    */
+    // ==================== INTERNI ENDPOINTI ====================
+    // Zasticeni InternalApiKeyFilter-om (X-Internal-Api-Key header)
+
     @DeleteMapping("/internal/unfollow")
     public ResponseEntity<Void> internalUnfollow(
         @RequestParam Long followerId,
@@ -84,128 +77,38 @@ public class FollowController {
     ) {
         try {
             followService.unfollow(followerId, followingId);
-        } catch (Exception e) {
-            // Ако не прати — игнориши
-        }
+        } catch (Exception e) { /* Ignorisi ako ne prati */ }
         return ResponseEntity.noContent().build();
     }
 
-    /*
-    Прихвати захтев за праћење.
-    */
-    @PostMapping("/requests/{requestId}/accept")
-    public ResponseEntity<Map<String, String>> acceptRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal UserDetails currentUser
-    ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-        followService.acceptRequest(requestId, currentUserId);
-        return ResponseEntity.ok(Map.of("message", "Захтев за праћење је прихваћен."));
+    /**
+     * Интерни — обриши све follow податке корисника (кад се налог брише).
+     * DELETE /api/v1/follow/internal/user/{userId}
+     */
+    @DeleteMapping("/internal/user/{userId}")
+    public ResponseEntity<Void> deleteAllByUser(@PathVariable Long userId) {
+        followService.deleteAllByUserId(userId);
+        return ResponseEntity.noContent().build();
     }
-
-    /*
-    Одбиј захтев за праћење.
-    */
-    @PostMapping("/requests/{requestId}/reject")
-    public ResponseEntity<Map<String, String>> rejectRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal UserDetails currentUser
-    ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-        followService.rejectRequest(requestId, currentUserId);
-        return ResponseEntity.ok(Map.of("message", "Захтев за праћење је одбијен."));
-    }
-
-    /*
-    Листа PENDING захтева за тренутног корисника.
-    */
-    @GetMapping("/requests/pending")
-    public ResponseEntity<List<FollowRequestDto>> getPendingRequests(
-        @AuthenticationPrincipal UserDetails currentUser
-    ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-        return ResponseEntity.ok(followService.getPendingRequests(currentUserId));
-    }
-
-    /*
-    Листа пратилаца.
-    */
-    @GetMapping("/{userId}/followers")
-    public ResponseEntity<?> getFollowers(
-        @PathVariable Long userId,
-         @AuthenticationPrincipal UserDetails currentUser) {
-        // Провери да ли је профил приватан
-        if (!canViewFollowList(userId, currentUser)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Приватан профил."));
-        }
-         return ResponseEntity.ok(followService.getFollowers(userId));
-        
-    }
-
-    /*
-    Листа профила које корисник прати.
-    */
-    @GetMapping("/{userId}/following")
-    public ResponseEntity<?> getFollowing(
-        @PathVariable Long userId,
-        @AuthenticationPrincipal UserDetails currentUser
-    ) {
-        if (!canViewFollowList(userId, currentUser)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Приватан профил."));
-        }
+    /**
+     * Интерни — листа ID-jева које корисник прати (за feed-service).
+     * GET /api/v1/follow/internal/{userId}/following
+     */
+    @GetMapping("/internal/{userId}/following")
+    public ResponseEntity<List<FollowDto>> getFollowingInternal(@PathVariable Long userId) {
         return ResponseEntity.ok(followService.getFollowing(userId));
     }
 
-    private boolean canViewFollowList(Long profileUserId, UserDetails currentUser) {
-        // Провери да ли је профил приватан
-        try {
-            UserProfileDto profile = restTemplate.getForObject(
-                "http://user-service:8082/api/v1/user/id/" + profileUserId,
-                UserProfileDto.class
-            );
-            // Јавни профил — сви виде
-            if (profile == null || profile.getPrivateProfile() == null || !profile.getPrivateProfile()) {
-                return true;
-            }
-        } catch (Exception e) {
-            return true; // Ако user-service није доступан, дозволи
-        }
-
-        // Приватан профил — мора бити улогован
-        if (currentUser == null) {
-            return false;
-        }
-
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-
-        // Власник види свој профил
-        if (currentUserId.equals(profileUserId)) {
-            return true;
-        }
-
-        // Пратилац види
-        return followRepository.existsByFollowerIdAndFollowingId(currentUserId, profileUserId);
+    @PostMapping("/notifications/internal")
+    public ResponseEntity<Void> createInternalNotification(@RequestBody Map<String, Object> body) {
+        followService.createInternalNotification(body);
+        return ResponseEntity.noContent().build();
     }
 
-    /*
-    Број пратилаца и праћених.
-    */
-    @GetMapping("/{userId}/count")
-    public ResponseEntity<FollowCountDto> getFollowCount(@PathVariable Long userId) {
-        return ResponseEntity.ok(followService.getFollowCount(userId));
-    }
-
-    /*
-    Да ли тренутни корисник прати неког.
-    */
-    @GetMapping("/check/{userId}")
-    public ResponseEntity<Map<String, Boolean>> isFollowing(
-        @PathVariable Long userId,
-        @AuthenticationPrincipal UserDetails currentUser
-    ) {
-        Long currentUserId = getCurrentUserId(currentUser.getUsername());
-        boolean following = followService.isFollowing(currentUserId, userId);
-        return ResponseEntity.ok(Map.of("following", following));
+    @PostMapping("/requests/accept-all/{userId}")
+    public ResponseEntity<Void> acceptAllPending(@PathVariable Long userId) {
+        followService.acceptAllPendingRequests(userId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/check-internal/{followerId}/{followingId}")
@@ -213,35 +116,122 @@ public class FollowController {
         @PathVariable Long followerId,
         @PathVariable Long followingId
     ) {
-        boolean following = followRepository.existsByFollowerIdAndFollowingId(followerId, followingId);
+        boolean following = followService.checkInternalFollow(followerId, followingId);
         return ResponseEntity.ok(Map.of("following", following));
     }
 
-    /*
-    Помоћни метод — из username-а добијамо userId позивом user-service.
-    */
-    private Long getCurrentUserId(String username) {
-        try {
-            UserProfileDto profile = restTemplate.getForObject(
-                "http://user-service:8082/api/v1/user/" + username,
-                UserProfileDto.class
-            );
-            if (profile == null) {
-                throw new RuntimeException("Корисник није пронађен.");
-            }
-            return profile.getId();
-        } catch (Exception e) {
-            throw new RuntimeException("Грешка при преузимању корисничких података.");
+    // ==================== ZAHTEVI ZA PRACENJE ====================
+
+    @PostMapping("/requests/{requestId}/accept")
+    public ResponseEntity<Map<String, String>> acceptRequest(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        followService.acceptRequest(requestId, currentUserId);
+        return ResponseEntity.ok(Map.of("message", "Захтев за праћење је прихваћен."));
+    }
+
+    @PostMapping("/requests/{requestId}/reject")
+    public ResponseEntity<Map<String, String>> rejectRequest(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        followService.rejectRequest(requestId, currentUserId);
+        return ResponseEntity.ok(Map.of("message", "Захтев за праћење је одбијен."));
+    }
+
+    @GetMapping("/requests/pending")
+    public ResponseEntity<List<FollowRequestDto>> getPendingRequests(
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        return ResponseEntity.ok(followService.getPendingRequests(currentUserId));
+    }
+
+    @GetMapping("/requests/check/{userId}")
+    public ResponseEntity<Map<String, Boolean>> hasPendingRequest(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        boolean pending = followService.hasPendingRequest(currentUserId, userId);
+        return ResponseEntity.ok(Map.of("pending", pending));
+    }
+
+    // ==================== LISTE, BROJEVI, STATUS ====================
+
+    @GetMapping("/{userId}/followers")
+    public ResponseEntity<?> getFollowers(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = currentUser != null
+            ? followService.getUserIdByUsername(currentUser.getUsername())
+            : null;
+
+        if (!followService.canViewFollowList(userId, currentUserId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Приватан профил."));
         }
+        return ResponseEntity.ok(followService.getFollowers(userId));
     }
 
-    /*
-    Интерни — прихвати све pending захтеве за корисника.
-    */
-    @PostMapping("/requests/accept-all/{userId}")
-    public ResponseEntity<Void> acceptAllPending(@PathVariable Long userId) {
-        followService.acceptAllPendingRequests(userId);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/{userId}/following")
+    public ResponseEntity<?> getFollowing(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = currentUser != null
+            ? followService.getUserIdByUsername(currentUser.getUsername())
+            : null;
+
+        if (!followService.canViewFollowList(userId, currentUserId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Приватан профил."));
+        }
+        return ResponseEntity.ok(followService.getFollowing(userId));
     }
 
+    @GetMapping("/{userId}/count")
+    public ResponseEntity<FollowCountDto> getFollowCount(@PathVariable Long userId) {
+        return ResponseEntity.ok(followService.getFollowCount(userId));
+    }
+
+    @GetMapping("/status/{userId}")
+    public ResponseEntity<Map<String, Boolean>> getFollowStatus(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        return ResponseEntity.ok(followService.getFollowStatus(currentUserId, userId));
+    }
+
+    @GetMapping("/check/{userId}")
+    public ResponseEntity<Map<String, Boolean>> isFollowing(
+        @PathVariable Long userId,
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        boolean following = followService.isFollowing(currentUserId, userId);
+        return ResponseEntity.ok(Map.of("following", following));
+    }
+
+    // ==================== NOTIFIKACIJE ====================
+
+    @GetMapping("/notifications")
+    public ResponseEntity<List<NotificationDto>> getNotifications(
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        return ResponseEntity.ok(followService.getNotifications(currentUserId));
+    }
+    
+    @PutMapping("/notifications/read-all")
+    public ResponseEntity<Map<String, String>> markAllAsRead(
+        @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        Long currentUserId = followService.getUserIdByUsername(currentUser.getUsername());
+        followService.markAllAsRead(currentUserId);
+        return ResponseEntity.ok(Map.of("message", "Сва обавештења означена као прочитана."));
+    }
 }

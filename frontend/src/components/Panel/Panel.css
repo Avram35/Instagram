@@ -1,0 +1,20 @@
+.panel {
+  background-color: white;
+  width: 400px;
+  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 200px;
+  height: 100vh;
+  border-top-right-radius: 15px;
+  z-index: 10;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15);
+
+  transform: translateX(-200px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.panel.show {
+  transform: translateX(0);
+  opacity: 1;
+}
