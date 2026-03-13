@@ -53,11 +53,11 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - interactive-service
-      #   working-directory: ./services/interactive-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - interactive-service
+        working-directory: ./services/interactive-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       - name: Generate image tag
         id: tag
@@ -111,9 +111,9 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/post-service:${{ steps.tag.outputs.TAG }}
 
-      # - name: Build and push interactive-service
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./services/interactive-service
-      #     push: true
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/interactive-service:${{ steps.tag.outputs.TAG }}
+      - name: Build and push interactive-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/interactive-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/interactive-service:${{ steps.tag.outputs.TAG }}

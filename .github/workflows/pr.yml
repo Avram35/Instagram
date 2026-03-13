@@ -52,8 +52,8 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - interactive-service
-      #   working-directory: ./services/interactive-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - interactive-service
+        working-directory: ./services/interactive-service
+        run: |
+          chmod +x mvnw
+          ./mvnw test
