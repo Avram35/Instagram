@@ -17,11 +17,20 @@ const mockPostInfo = {
   media: [{ mediaUrl: "/media/test.jpg" }],
 };
 
+const mockUser = {
+  id: 1,
+  username: "mihajlotim",
+};
+
 const singlePostRef = { current: document.createElement("div") };
 
 const renderSinglePost = async (postInfo = mockPostInfo) => {
   await act(async () => {
-    render(<SinglePost singlePostRef={singlePostRef} postInfo={postInfo} />);
+    render(
+      <AppContext.Provider value={{ user: mockUser }}>
+        <SinglePost singlePostRef={singlePostRef} postInfo={postInfo} />
+      </AppContext.Provider>,
+    );
   });
 };
 
@@ -59,7 +68,9 @@ describe("SinglePost", () => {
   it("prikazuje loading dok se ucitava autor", () => {
     global.fetch = vi.fn(() => new Promise(() => {}));
     render(
-      <SinglePost singlePostRef={singlePostRef} postInfo={mockPostInfo} />,
+      <AppContext.Provider value={{ user: mockUser }}>
+        <SinglePost singlePostRef={singlePostRef} postInfo={mockPostInfo} />
+      </AppContext.Provider>,
     );
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
@@ -91,7 +102,7 @@ describe("SinglePost", () => {
     ).toBeInTheDocument();
   });
 
-  it("ne prikazuje karusel dugmece za jednu sliku ili video", async () => {
+  it("ne prikazuje karusel dugmиce za jednu sliku ili video", async () => {
     await renderSinglePost();
     expect(document.querySelector(".carousel_btn_left")).toBeNull();
     expect(document.querySelector(".carousel_btn_right")).toBeNull();
