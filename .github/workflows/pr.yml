@@ -2,7 +2,7 @@ name: PR Tests
 
 on:
   pull_request:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -19,28 +19,42 @@ jobs:
 
       - name: Run tests - auth-service
         working-directory: ./services/auth-service
-        run: ./mvnw test
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # - name: Run tests - user-service
       #   working-directory: ./services/user-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
 
       # - name: Run tests - follow-service
       #   working-directory: ./services/follow-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
 
       # - name: Run tests - blok-service
       #   working-directory: ./services/blok-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
 
       # - name: Run tests - feed-service
       #   working-directory: ./services/feed-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
 
       # - name: Run tests - post-service
       #   working-directory: ./services/post-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
 
       # - name: Run tests - interactive-service
       #   working-directory: ./services/interactive-service
-      #   run: ./mvnw test
+      #   run: |
+      #     chmod +x mvnw
+      #     ./mvnw test
