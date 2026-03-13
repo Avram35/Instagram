@@ -38,7 +38,7 @@ describe("Login forma", () => {
     expect(screen.getByText("Пријави се")).toBeInTheDocument();
   });
 
-  it("prikazuje grešku ako su polja prazna", async () => {
+  it("prikazuje gresku ako su polja prazna", async () => {
     renderLogin();
     fireEvent.click(screen.getByText("Пријави се"));
     expect(
@@ -66,7 +66,7 @@ describe("Login forma", () => {
     });
   });
 
-  it("prikazuje grešku ako login nije uspješan", async () => {
+  it("prikazuje gresku ako login nije uspesan", async () => {
     mockLogin.mockResolvedValue({
       success: false,
       message: "Погрешна лозинка!",
@@ -95,7 +95,7 @@ describe("Login forma", () => {
     expect(screen.getByText("Прикажи")).toBeInTheDocument();
   });
 
-  it("toggle prikazuje/sakriva lozinku", () => {
+  it("prikazuje/sakriva lozinku", () => {
     renderLogin();
     const input = screen.getByPlaceholderText("Лозинка");
     fireEvent.change(input, { target: { value: "abc" } });
@@ -117,7 +117,7 @@ describe("Registracija forma", () => {
     expect(screen.getByPlaceholderText("Е-адреса")).toBeInTheDocument();
   });
 
-  it("prikazuje grešku ako lozinke ne odgovaraju", async () => {
+  it("prikazuje gresku ako lozinke ne odgovaraju", async () => {
     renderLogin();
     fireEvent.click(screen.getAllByText("Региструјте се")[0]);
 
@@ -146,7 +146,7 @@ describe("Registracija forma", () => {
     ).toBeInTheDocument();
   });
 
-  it("prikazuje grešku ako je lozinka kraća od 6 karaktera", async () => {
+  it("prikazuje gresku ako je lozinka kraca od 6 karaktera", async () => {
     renderLogin();
     fireEvent.click(screen.getAllByText("Региструјте се")[0]);
 
