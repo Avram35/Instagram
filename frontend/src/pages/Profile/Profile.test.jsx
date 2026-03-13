@@ -35,6 +35,11 @@ beforeEach(() => {
         json: () => Promise.resolve(mockFollowCount),
       });
     }
+    if (url.includes("/api/v1/post")) {
+      return Promise.resolve({
+        json: () => Promise.resolve([]),
+      });
+    }
   });
 
   localStorage.setItem("token", "test-token");
@@ -93,22 +98,22 @@ describe("Profile", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("prikazuje dugme Izmeni profil za sopstveni profil", async () => {
+  it("prikazuje dugme Измените профил za sopstveni profil", async () => {
     await renderProfile();
     expect(screen.getByText("Измените профил")).toBeInTheDocument();
   });
 
-  it("prikazuje dugme Prati za tudji profil", async () => {
+  it("prikazuje dugme Прати za tudji profil", async () => {
     await renderProfile("mihajlotim", { username: "otheruser" });
     expect(screen.getByText("Прати")).toBeInTheDocument();
   });
 
-  it("prikazuje da je nalog javan", async () => {
+  it("prikazuje poruku kad nema objava", async () => {
     await renderProfile();
-    expect(screen.getByText("Налог је јаван")).toBeInTheDocument();
+    expect(screen.getByText("Поделите фотографије")).toBeInTheDocument();
   });
 
-  it("prikazuje da je nalog privatan", async () => {
+  it("prikazuje da je nalog privatan za tudji profil", async () => {
     global.fetch = vi.fn((url) => {
       if (url.includes("/api/v1/user")) {
         return Promise.resolve({
@@ -116,12 +121,17 @@ describe("Profile", () => {
             Promise.resolve({ ...mockProfileInfo, privateProfile: true }),
         });
       }
+      if (url.includes("/api/v1/post")) {
+        return Promise.resolve({
+          json: () => Promise.resolve([]),
+        });
+      }
       return Promise.resolve({
         json: () => Promise.resolve(mockFollowCount),
       });
     });
 
-    await renderProfile();
-    expect(screen.getByText("Налог је приватан")).toBeInTheDocument();
+    await renderProfile("mihajlotim", { username: "otheruser" });
+    expect(screen.getByText("Овај налог је приватан")).toBeInTheDocument();
   });
 });

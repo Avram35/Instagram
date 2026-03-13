@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import "./Navbar.css";
 import { assets } from "../../assets/assets";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ const Navbar = ({
   setMorePanel,
   panRef,
   morePanRef,
+  setCreatePost,
 }) => {
   const [active, setActive] = useState("pocetak");
   const navigate = useNavigate();
@@ -197,6 +198,7 @@ const Navbar = ({
               setActive("objavi");
               setSearchNotification(null);
               setMorePanel(false);
+              setCreatePost(true);
             }}
           >
             <img

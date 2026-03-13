@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar/Navbar";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Feed from "./pages/Feed/Feed";
@@ -8,14 +8,33 @@ import Login from "./pages/Login/Login";
 import MorePanel from "./components/MorePanel/MorePanel";
 import Panel from "./components/Panel/Panel";
 import EditProfile from "./pages/EditProfile/EditProfile";
+import CreatePost from "./components/CreatePost/CreatePost";
 
 const App = () => {
   const { user } = useContext(AppContext);
   const [morePanel, setMorePanel] = React.useState(false);
   const [searchNotification, setSearchNotification] = React.useState(null);
+  const [createPost, setCreatePost] = useState(false);
+  const createPostRef = useRef(null);
 
   const morePanRef = useRef(null);
   const panRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (createPost) {
+        if (!createPostRef.current.contains(e.target)) {
+          setCreatePost(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [createPost]);
 
   return (
     <div className="app">
@@ -28,6 +47,7 @@ const App = () => {
             setMorePanel={setMorePanel}
             panRef={panRef}
             morePanRef={morePanRef}
+            setCreatePost={setCreatePost}
           />
           <Panel searchNotification={searchNotification} panRef={panRef} />
           <MorePanel
@@ -35,6 +55,14 @@ const App = () => {
             setMorePanel={setMorePanel}
             morePanRef={morePanRef}
           />
+          {createPost && (
+            <div className="overlay">
+              <CreatePost
+                createPostRef={createPostRef}
+                setCreatePost={setCreatePost}
+              />
+            </div>
+          )}
         </>
       )}
 

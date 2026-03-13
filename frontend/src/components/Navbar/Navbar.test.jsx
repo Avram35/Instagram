@@ -11,7 +11,7 @@ import Navbar from "./Navbar";
 import { AppContext } from "../../context/AppContext";
 
 const mockUser = {
-  username: "testuser",
+  username: "mihajlotim",
   profilePictureUrl: "",
 };
 
@@ -22,6 +22,8 @@ const mockProps = {
   setMorePanel: vi.fn(),
   panRef: { current: document.createElement("div") },
   morePanRef: { current: document.createElement("div") },
+  setCreatePost: vi.fn(),
+  createPost: false,
 };
 
 const renderNavbar = async (props = {}) => {
@@ -73,9 +75,10 @@ describe("Navbar", () => {
     expect(mockProps.setMorePanel).toHaveBeenCalled();
   });
 
-  it("klik na Објави postavlja active na objavi", async () => {
+  it("klik na Објави poziva setCreatePost", async () => {
     await renderNavbar();
     fireEvent.click(screen.getByText("Објави"));
+    expect(mockProps.setCreatePost).toHaveBeenCalledWith(true);
     expect(mockProps.setSearchNotification).toHaveBeenCalledWith(null);
     expect(mockProps.setMorePanel).toHaveBeenCalledWith(false);
   });
