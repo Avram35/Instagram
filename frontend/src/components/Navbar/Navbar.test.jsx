@@ -10,6 +10,33 @@ import { MemoryRouter } from "react-router-dom";
 import Navbar from "./Navbar";
 import { AppContext } from "../../context/AppContext";
 
+vi.mock("../../api/followApi", () => ({
+  fetchNotifications: vi.fn(() => Promise.resolve([])),
+  fetchPendingRequests: vi.fn(() => Promise.resolve([])),
+  markNotificationsAsRead: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("../../api/userApi", () => ({
+  getUserAvatarUrl: vi.fn(() => "mocked-avatar-url"),
+}));
+
+vi.mock("../../assets/assets", () => ({
+  assets: {
+    logo: "mocked-logo",
+    home: "mocked-home",
+    home1: "mocked-home1",
+    search: "mocked-search",
+    search1: "mocked-search1",
+    heart: "mocked-heart",
+    heart1: "mocked-heart1",
+    plus: "mocked-plus",
+    plus1: "mocked-plus1",
+    menu: "mocked-menu",
+    menu1: "mocked-menu1",
+    noProfilePic: "mocked-no-profile-pic",
+  },
+}));
+
 const mockUser = {
   username: "mihajlotim",
   profilePictureUrl: "",
@@ -87,5 +114,27 @@ describe("Navbar", () => {
     await renderNavbar();
     fireEvent.click(screen.getByText("Почетак"));
     expect(mockProps.setSearchNotification).toHaveBeenCalledWith(null);
+  });
+
+  it("prikazuje crveni indikator kad ima neprocitanih obavestenja", async () => {
+    const { fetchNotifications } = await import("../../api/followApi");
+    vi.mocked(fetchNotifications).mockResolvedValueOnce([
+      { id: 1, read: false },
+    ]);
+
+    await renderNavbar();
+    expect(document.querySelector(".unread_notifications")).toBeInTheDocument();
+  });
+
+  it("ne prikazuje crveni indikator kad su sva obavenstenja procitana", async () => {
+    const { fetchNotifications } = await import("../../api/followApi");
+    vi.mocked(fetchNotifications).mockResolvedValueOnce([
+      { id: 1, read: true },
+    ]);
+
+    await renderNavbar();
+    expect(
+      document.querySelector(".unread_notifications"),
+    ).not.toBeInTheDocument();
   });
 });

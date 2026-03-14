@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { assets } from "../../assets/assets";
 import "./FollowerRow.css";
-
-const USER_API_URL = "http://localhost:8082/api/v1/user/id";
+import { fetchUserById, getUserAvatarUrl } from "../../api/userApi";
 
 const FollowerRow = ({
   userId,
@@ -21,11 +20,7 @@ const FollowerRow = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${USER_API_URL}/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
+        const data = await fetchUserById(userId);
         setUserData(data);
       } catch (e) {
         console.error(e);
@@ -44,7 +39,7 @@ const FollowerRow = ({
   return (
     <div className="follower_row">
       <img
-        src={userData.profilePictureUrl || assets.noProfilePic}
+        src={getUserAvatarUrl(userData.profilePictureUrl, assets.noProfilePic)}
         className="follower_img"
         alt=""
         onClick={handleNavigate}

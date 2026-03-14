@@ -11,7 +11,7 @@ import EditProfile from "./pages/EditProfile/EditProfile";
 import CreatePost from "./components/CreatePost/CreatePost";
 
 const App = () => {
-  const { user } = useContext(AppContext);
+  const { user, loading, onPostCreated } = useContext(AppContext);
   const [morePanel, setMorePanel] = React.useState(false);
   const [searchNotification, setSearchNotification] = React.useState(null);
   const [createPost, setCreatePost] = useState(false);
@@ -30,11 +30,15 @@ const App = () => {
     };
 
     document.addEventListener("mousedown", handleClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-    };
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [createPost]);
+
+  if (loading)
+    return (
+      <div className="loading_screen">
+        <p>Учитава се...</p>
+      </div>
+    );
 
   return (
     <div className="app">
@@ -48,6 +52,7 @@ const App = () => {
             panRef={panRef}
             morePanRef={morePanRef}
             setCreatePost={setCreatePost}
+            createPost={createPost}
           />
           <Panel
             searchNotification={searchNotification}
@@ -64,6 +69,7 @@ const App = () => {
               <CreatePost
                 createPostRef={createPostRef}
                 setCreatePost={setCreatePost}
+                onPostCreated={onPostCreated}
               />
             </div>
           )}

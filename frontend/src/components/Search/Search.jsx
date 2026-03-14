@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Search.css";
 import { assets } from "../../assets/assets";
 import { useNavigate } from "react-router-dom";
-
-const USER_API_URL = "http://localhost:8082/api/v1/user";
+import { searchUsers, getUserAvatarUrl } from "../../api/userApi";
 
 const Search = ({ setSearchNotification }) => {
   const [search, setSearch] = useState("");
@@ -18,12 +17,7 @@ const Search = ({ setSearchNotification }) => {
 
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${USER_API_URL}/search?query=${search}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await response.json();
+        const data = await searchUsers(search);
         setSearchProfiles(data);
       } catch (error) {
         console.error("Error searching users:", error);
@@ -56,7 +50,13 @@ const Search = ({ setSearchNotification }) => {
               setSearchNotification(false);
             }}
           >
-            <img src={prof.profilePictureUrl || assets.noProfilePic} alt="" />
+            <img
+              src={getUserAvatarUrl(
+                prof.profilePictureUrl,
+                assets.noProfilePic,
+              )}
+              alt=""
+            />
             <div className="search_profile_info">
               <span className="search_username">{prof.username}</span>
               <span className="search_name">

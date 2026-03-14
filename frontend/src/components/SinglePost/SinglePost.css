@@ -21,9 +21,13 @@
   display: flex;
   align-items: center;
   gap: 15px;
+  cursor: pointer;
 }
-.single_post_profile img {
+.single_post_profile img,
+.single_post_profile_comment img {
   width: 30px;
+  height: 30px;
+  object-fit: cover;
   border-radius: 50%;
 }
 .single_post_profile span {
@@ -34,6 +38,14 @@
   display: flex;
   align-items: start;
   gap: 15px;
+  width: 100%;
+}
+.comment.comment_editing {
+  align-items: flex-start;
+}
+
+.single_post_profile_comment.comment_editing {
+  align-items: flex-start;
 }
 .single_post_profile_comment img {
   width: 30px;
@@ -42,12 +54,14 @@
 .single_post_username {
   margin-right: 5px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   color: rgba(0, 0, 0, 0.8);
 }
 .single_post_comment {
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 300;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 .right_side {
   display: flex;
@@ -59,6 +73,8 @@
 .comments {
   flex: 1;
   border-bottom: 1px solid #ededed;
+  overflow-y: auto;
+  min-height: 0;
 }
 .input_comments {
   padding: 10px 10px;
@@ -74,7 +90,8 @@
   padding: 10px;
 }
 .comments {
-  padding: 10px;
+  padding: 0px 10px;
+  padding-right: 15px;
 }
 .like_comm {
   display: flex;
@@ -83,6 +100,7 @@
 }
 .like_comm img {
   width: 20px;
+
   cursor: pointer;
 }
 .created_at_div {
@@ -93,7 +111,7 @@
   color: gray;
 }
 .like_counts_div {
-  padding-left: 5px;
+  padding-left: 0px;
 }
 .like_counts {
   font-size: 12px;
@@ -147,7 +165,6 @@
   height: auto;
   cursor: pointer;
 }
-/* Dodati na kraj postojeceg SinglePost.css */
 
 .post_menu_wrapper {
   position: relative;
@@ -204,7 +221,7 @@
 }
 
 .delete_media_btn:hover {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(220, 38, 38, 0.85);
 }
 
 .edit_desc_wrapper {
@@ -212,6 +229,7 @@
   flex-direction: column;
   gap: 6px;
   margin-top: 4px;
+  width: 100%;
 }
 
 .edit_desc_input {
@@ -254,4 +272,60 @@
 
 .single_post_div_comment_info {
   flex: 1;
+  padding-right: 5px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.delete_comment_btn {
+  margin-left: auto;
+  font-size: 15px;
+  color: #999;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.delete_comment_btn:hover {
+  color: #ed4956;
+}
+
+.post_comment_btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0095f6;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.post_comment_btn:hover {
+  color: #0086e0;
+}
+
+.input_comments {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.comment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.post_comment_btn_disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.comment_count_wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comment_count_wrapper span {
+  font-size: 12px;
+  font-weight: 600;
 }

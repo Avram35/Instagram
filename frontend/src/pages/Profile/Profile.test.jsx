@@ -4,52 +4,71 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Profile from "./Profile";
 import { AppContext } from "../../context/AppContext";
 
-const mockProfileInfo = {
-  id: 1,
-  username: "mihajlotim",
-  fname: "Mihajlo",
-  lname: "Timotijevic",
-  bio: "Ja sam Mihajlo i vozim biciklu.",
-  profilePictureUrl: null,
-  privateProfile: false,
-};
+vi.mock("../../assets/assets", () => ({
+  assets: {
+    noProfilePic: "mocked-no-profile-pic",
+    instagramPhoto: "mocked-instagram-photo",
+    more: "mocked-more",
+    more_media: "mocked-more-media",
+  },
+}));
 
-const mockFollowCount = {
-  followersCount: 10,
-  followingCount: 5,
-};
+vi.mock("../../api/userApi", () => ({
+  fetchProfileInfo: vi.fn(() =>
+    Promise.resolve({
+      id: 1,
+      username: "mihajlotim",
+      fname: "Mihajlo",
+      lname: "Timotijevic",
+      bio: "Ja sam Mihajlo i vozim biciklu.",
+      profilePictureUrl: null,
+      privateProfile: false,
+    }),
+  ),
+  getUserAvatarUrl: vi.fn(() => "mocked-avatar-url"),
+}));
 
-const mockUser = {
-  username: "mihajlotim",
-};
+vi.mock("../../api/followApi", () => ({
+  fetchFollowCount: vi.fn(() =>
+    Promise.resolve({ followersCount: 10, followingCount: 5 }),
+  ),
+  checkFollow: vi.fn(() =>
+    Promise.resolve({ following: false, pending: false }),
+  ),
+  toggleFollow: vi.fn(),
+}));
 
-beforeEach(() => {
-  global.fetch = vi.fn((url) => {
-    if (url.includes("/api/v1/user")) {
-      return Promise.resolve({
-        json: () => Promise.resolve(mockProfileInfo),
-      });
-    }
-    if (url.includes("/api/v1/follow")) {
-      return Promise.resolve({
-        json: () => Promise.resolve(mockFollowCount),
-      });
-    }
-    if (url.includes("/api/v1/post")) {
-      return Promise.resolve({
-        json: () => Promise.resolve([]),
-      });
-    }
-  });
+vi.mock("../../api/postApi", () => ({
+  fetchPosts: vi.fn(() => Promise.resolve([])),
+  fetchPostCount: vi.fn(() => Promise.resolve({ count: 0 })),
+  getPostMediaUrl: vi.fn((url) => url),
+}));
 
-  localStorage.setItem("token", "test-token");
-});
+vi.mock("../../api/blockApi", () => ({
+  checkBlock: vi.fn(() => Promise.resolve({ blocked: false })),
+  toggleBlock: vi.fn(),
+}));
 
-afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
-  localStorage.clear();
-});
+vi.mock("../../components/SinglePost/SinglePost", () => ({
+  default: () => <div>SinglePost</div>,
+}));
+
+vi.mock("../../components/FollowersModal/FollowersModal", () => ({
+  default: () => <div>FollowersModal</div>,
+}));
+
+vi.mock("../../components/CustomConfirm/CustomConfirm", () => ({
+  default: ({ message, onConfirm, onCancel }) => (
+    <div>
+      <span>{message}</span>
+      <button onClick={onConfirm}>Потврди</button>
+      <button onClick={onCancel}>Откажи</button>
+    </div>
+  ),
+}));
+
+const mockUser = { username: "mihajlotim" };
+const mockSetOnPostCreated = vi.fn();
 
 const renderProfile = async (
   username = "mihajlotim",
@@ -58,7 +77,9 @@ const renderProfile = async (
   await act(async () => {
     render(
       <MemoryRouter initialEntries={[`/profile/${username}`]}>
-        <AppContext.Provider value={{ user: contextUser }}>
+        <AppContext.Provider
+          value={{ user: contextUser, setOnPostCreated: mockSetOnPostCreated }}
+        >
           <Routes>
             <Route path="/profile/:username" element={<Profile />} />
           </Routes>
@@ -68,19 +89,33 @@ const renderProfile = async (
   });
 };
 
+beforeEach(() => {
+  localStorage.setItem("token", "test-token");
+});
+
+afterEach(() => {
+  cleanup();
+  vi.resetAllMocks();
+  localStorage.clear();
+});
+
 describe("Profile", () => {
-  it("prikazuje loading dok se ucitava profil", () => {
-    global.fetch = vi.fn(() => new Promise(() => {}));
+  it("prikazuje loading dok se ucitava profil", async () => {
+    const { fetchProfileInfo } = await import("../../api/userApi");
+    vi.mocked(fetchProfileInfo).mockImplementation(() => new Promise(() => {}));
+
     render(
       <MemoryRouter initialEntries={["/profile/mihajlotim"]}>
-        <AppContext.Provider value={{ user: mockUser }}>
+        <AppContext.Provider
+          value={{ user: mockUser, setOnPostCreated: mockSetOnPostCreated }}
+        >
           <Routes>
             <Route path="/profile/:username" element={<Profile />} />
           </Routes>
         </AppContext.Provider>
       </MemoryRouter>,
     );
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("Учитава се...")).toBeInTheDocument();
   });
 
   it("prikazuje informacije o profilu", async () => {
@@ -94,8 +129,10 @@ describe("Profile", () => {
 
   it("prikazuje broj pratilaca i pracenja", async () => {
     await renderProfile();
-    expect(screen.getByText("10")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument();
+    const numbers = screen.getAllByText("10");
+    expect(numbers.length).toBeGreaterThan(0);
+    const numbers2 = screen.getAllByText("5");
+    expect(numbers2.length).toBeGreaterThan(0);
   });
 
   it("prikazuje dugme Измените профил za sopstveni profil", async () => {
@@ -114,21 +151,15 @@ describe("Profile", () => {
   });
 
   it("prikazuje da je nalog privatan za tudji profil", async () => {
-    global.fetch = vi.fn((url) => {
-      if (url.includes("/api/v1/user")) {
-        return Promise.resolve({
-          json: () =>
-            Promise.resolve({ ...mockProfileInfo, privateProfile: true }),
-        });
-      }
-      if (url.includes("/api/v1/post")) {
-        return Promise.resolve({
-          json: () => Promise.resolve([]),
-        });
-      }
-      return Promise.resolve({
-        json: () => Promise.resolve(mockFollowCount),
-      });
+    const { fetchProfileInfo } = await import("../../api/userApi");
+    fetchProfileInfo.mockResolvedValueOnce({
+      id: 1,
+      username: "mihajlotim",
+      fname: "Mihajlo",
+      lname: "Timotijevic",
+      bio: "Ja sam Mihajlo i vozim biciklu.",
+      profilePictureUrl: null,
+      privateProfile: true,
     });
 
     await renderProfile("mihajlotim", { username: "otheruser" });

@@ -1,27 +1,30 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./CreatePost.css";
 import { assets } from "../../assets/assets";
+import { createPost } from "../../api/postApi";
+import CustomAlert from "../CustomAlert/CustomAlert";
 
-const POST_API_URL = "http://localhost:8086/api/v1/post";
-
-const CreatePost = ({ createPostRef, setCreatePost }) => {
+const CreatePost = ({ createPostRef, setCreatePost, onPostCreated }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [description, setDescription] = useState("");
   const [step, setStep] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
 
     if (files.length > 20) {
-      alert("Максималан број фајлова је 20!");
+      setAlert({ message: "Максималан број фајлова је 20!", type: "error" });
       return;
     }
 
     const tooBig = files.some((file) => file.size > 50 * 1024 * 1024);
     if (tooBig) {
-      alert("Фајл не сме бити већи од 50MB!");
+      setAlert({ message: "Фајл не сме бити већи од 50MB!", type: "error" });
       return;
     }
 
@@ -37,29 +40,23 @@ const CreatePost = ({ createPostRef, setCreatePost }) => {
   };
 
   const handleSubmit = async () => {
-    const token = localStorage.getItem("token");
-
-    const formData = new FormData();
-    selectedFiles.forEach((file) => formData.append("files", file));
-    if (description) formData.append("description", description);
-
+    if (loading) return;
+    setLoading(true);
     try {
-      const response = await fetch(`${POST_API_URL}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
+      const response = await createPost(selectedFiles, description);
       if (response.ok) {
-        alert("Објава успешно додата!");
-        setCreatePost(false);
+        setSubmitted(true);
+        onPostCreated?.();
+        setAlert({ message: "Објава успешно додата!", type: "success" });
+        setTimeout(() => setCreatePost(false), 3000);
       } else {
-        alert("Грешка при објављивању!");
+        setAlert({ message: "Грешка при објављивању!", type: "error" });
       }
     } catch (error) {
       console.error("Post error:", error);
+      setAlert({ message: "Грешка при објављивању!", type: "error" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,8 +72,11 @@ const CreatePost = ({ createPostRef, setCreatePost }) => {
         )}
         <h2>Направите нову објаву</h2>
         {step === 2 && (
-          <span className="publish_post" onClick={handleSubmit}>
-            Подели
+          <span
+            className={`publish_post ${loading || submitted ? "publish_post_disabled" : ""}`}
+            onClick={!loading && !submitted ? handleSubmit : undefined}
+          >
+            {loading ? "Објављује се..." : "Подели"}
           </span>
         )}
       </div>
@@ -140,6 +140,14 @@ const CreatePost = ({ createPostRef, setCreatePost }) => {
             maxLength={2200}
           />
         </div>
+      )}
+
+      {alert && (
+        <CustomAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
     </div>
   );

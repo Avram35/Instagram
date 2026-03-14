@@ -1,8 +1,14 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import "./Navbar.css";
 import { assets } from "../../assets/assets";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "../../context/AppContext";
+import {
+  fetchNotifications,
+  fetchPendingRequests,
+  markNotificationsAsRead,
+} from "../../api/followApi";
+import { getUserAvatarUrl } from "../../api/userApi";
 
 const Navbar = ({
   setSearchNotification,
@@ -12,6 +18,7 @@ const Navbar = ({
   panRef,
   morePanRef,
   setCreatePost,
+  createPost,
 }) => {
   const [active, setActive] = useState("pocetak");
   const navigate = useNavigate();
@@ -20,6 +27,7 @@ const Navbar = ({
   const moreDivRef = useRef(null);
   const searchDivRef = useRef(null);
   const notificationDivRef = useRef(null);
+  const [hasUnread, setHasUnread] = useState(false);
 
   const { user } = useContext(AppContext);
 
@@ -83,11 +91,28 @@ const Navbar = ({
     };
 
     document.addEventListener("mousedown", handleClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-    };
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [morePanel, searchNotification]);
+
+  useEffect(() => {
+    const checkUnread = async () => {
+      try {
+        const [notifs, pending] = await Promise.all([
+          fetchNotifications(),
+          fetchPendingRequests(),
+        ]);
+        const lastNotif = notifs[0];
+        setHasUnread(pending.length > 0 || (lastNotif && !lastNotif.read));
+      } catch (e) {}
+    };
+    checkUnread();
+  }, []);
+
+  useEffect(() => {
+    if (!createPost && active === "objavi") {
+      setActive(isFeed ? "pocetak" : isProfile ? "profil" : "");
+    }
+  }, [createPost]);
 
   return (
     <div className="navbar">
@@ -130,16 +155,15 @@ const Navbar = ({
               active === "pretraga" ? "navbar-element active" : "navbar-element"
             }
             onClick={() => {
-              setActive((prev) => {
-                return prev === "pretraga"
+              setActive((prev) =>
+                prev === "pretraga"
                   ? isFeed
                     ? "pocetak"
                     : isProfile
                       ? "profil"
                       : ""
-                  : "pretraga";
-              });
-
+                  : "pretraga",
+              );
               if (searchNotification === "pretraga") {
                 setSearchNotification(null);
               } else {
@@ -165,6 +189,10 @@ const Navbar = ({
                 : "navbar-element"
             }
             onClick={() => {
+              if (searchNotification !== "obavestenja") {
+                setHasUnread(false);
+                markNotificationsAsRead();
+              }
               setActive((prev) =>
                 prev === "obavestenja"
                   ? isFeed
@@ -182,10 +210,26 @@ const Navbar = ({
               setMorePanel(false);
             }}
           >
-            <img
-              src={active === "obavestenja" ? assets.heart1 : assets.heart}
-              alt=""
-            />
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <img
+                src={active === "obavestenja" ? assets.heart1 : assets.heart}
+                alt=""
+              />
+              {hasUnread && (
+                <span
+                  className="unread_notifications"
+                  style={{
+                    position: "absolute",
+                    top: -3,
+                    right: -3,
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "red",
+                  }}
+                />
+              )}
+            </div>
             <span>Обавештења</span>
           </div>
         </li>
@@ -223,9 +267,15 @@ const Navbar = ({
             <div
               className={`img_wrapper ${active === "profil" ? "active" : ""}`}
             >
-              <img src={assets.noProfilePic} alt="" className="profile_pic" />
+              <img
+                src={getUserAvatarUrl(
+                  user.profilePictureUrl,
+                  assets.noProfilePic,
+                )}
+                alt=""
+                className="profile_pic"
+              />{" "}
             </div>
-
             <span>Профил</span>
           </div>
         </li>
