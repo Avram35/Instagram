@@ -1,0 +1,326 @@
+services:
+  # --- AUTH SERVICE ---
+  auth_db:
+    image: postgres:18-alpine
+    container_name: auth-postgres-db
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+      - ./services/auth-service/init-db/auth-db.sql:/docker-entrypoint-initdb.d/auth-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      auth_db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      follow-service:
+        condition: service_healthy
+      blok-service:
+        condition: service_healthy
+      post-service:
+        condition: service_healthy
+      interactive-service:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth_db:${AUTH_DB_PORT}/${AUTH_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # --- USER SERVICE ---
+  user_db:
+    image: postgres:18-alpine
+    container_name: user-postgres-db
+    environment:
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${USER_DB_USER}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+      - ./services/user-service/init-db/user-db.sql:/docker-entrypoint-initdb.d/user-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER} -d ${USER_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: user-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      user_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user_db:${USER_DB_PORT}/${USER_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    volumes:
+      - user_uploads:/app/uploads
+
+  # --- FOLLOW SERVICE ---
+  follow_db:
+    image: postgres:18-alpine
+    container_name: follow-postgres-db
+    environment:
+      POSTGRES_DB: ${FOLLOW_DB_NAME}
+      POSTGRES_USER: ${FOLLOW_DB_USER}
+      POSTGRES_PASSWORD: ${FOLLOW_DB_PASSWORD}
+    volumes:
+      - follow_postgres_data:/var/lib/postgresql/data
+      - ./services/follow-service/init-db/follow-db.sql:/docker-entrypoint-initdb.d/follow-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FOLLOW_DB_USER} -d ${FOLLOW_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  follow-service:
+    build:
+      context: ./services/follow-service
+    container_name: follow-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      follow_db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://follow_db:${FOLLOW_DB_PORT}/${FOLLOW_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${FOLLOW_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${FOLLOW_DB_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+  # --- BLOK SERVICE ---
+  blok_db:
+    image: postgres:18-alpine
+    container_name: blok-postgres-db
+    environment:
+      POSTGRES_DB: ${BLOK_DB_NAME}
+      POSTGRES_USER: ${BLOK_DB_USER}
+      POSTGRES_PASSWORD: ${BLOK_DB_PASSWORD}
+    volumes:
+      - blok_postgres_data:/var/lib/postgresql/data
+      - ./services/blok-service/init-db/blok-db.sql:/docker-entrypoint-initdb.d/blok-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BLOK_DB_USER} -d ${BLOK_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  blok-service:
+    build:
+      context: ./services/blok-service
+    container_name: blok-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      blok_db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://blok_db:${BLOK_DB_PORT}/${BLOK_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${BLOK_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${BLOK_DB_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+
+  # --- POST SERVICE ---
+  post_db:
+    image: postgres:18-alpine
+    container_name: post-postgres-db
+    environment:
+      POSTGRES_DB: ${POST_DB_NAME}
+      POSTGRES_USER: ${POST_DB_USER}
+      POSTGRES_PASSWORD: ${POST_DB_PASSWORD}
+    volumes:
+      - post_postgres_data:/var/lib/postgresql/data
+      - ./services/post-service/init-db/post-db.sql:/docker-entrypoint-initdb.d/post-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POST_DB_USER} -d ${POST_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  post-service:
+    build: ./services/post-service
+    container_name: post-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      post_db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      follow-service:
+        condition: service_healthy
+      interactive-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://post_db:${POST_DB_PORT}/${POST_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POST_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POST_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    volumes:
+      - post_uploads:/app/uploads
+
+  # --- INTERACTIVE SERVICE ---
+  interactive_db:
+    image: postgres:18-alpine
+    container_name: interactive-postgres-db
+    environment:
+      POSTGRES_DB: ${INTERACTIVE_DB_NAME}
+      POSTGRES_USER: ${INTERACTIVE_DB_USER}
+      POSTGRES_PASSWORD: ${INTERACTIVE_DB_PASSWORD}
+    volumes:
+      - interactive_postgres_data:/var/lib/postgresql/data
+      - ./services/interactive-service/init-db/interactive-db.sql:/docker-entrypoint-initdb.d/interactive-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INTERACTIVE_DB_USER} -d ${INTERACTIVE_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  interactive-service:
+    build: ./services/interactive-service
+    container_name: interactive-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      interactive_db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      follow-service:
+        condition: service_healthy
+      post-service:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://interactive_db:${INTERACTIVE_DB_PORT}/${INTERACTIVE_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${INTERACTIVE_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${INTERACTIVE_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --- FEED SERVICE ---
+  feed-service:
+    build:
+      context: ./services/feed-service
+    container_name: feed-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      follow-service:
+        condition: service_healthy
+      blok-service:
+        condition: service_healthy
+      post-service:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --- FRONTEND ---
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    environment:
+      - VITE_CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+
+volumes:
+  auth_postgres_data:
+  user_postgres_data:
+  user_uploads:
+  follow_postgres_data:
+  blok_postgres_data:
+  post_postgres_data:
+  post_uploads:
+  interactive_postgres_data:
