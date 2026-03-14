@@ -1,0 +1,22 @@
+.feed {
+  display: flex;
+  justify-content: center;
+  gap: 100px;
+  z-index: 0;
+  padding-bottom: 50px;
+}
+.empty_feed {
+  margin-top: 80px;
+  text-align: center;
+  color: #aaa;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+}
+.overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  z-index: 25;
+}

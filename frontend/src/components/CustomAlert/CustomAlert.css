@@ -1,0 +1,58 @@
+.custom_alert {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: custom_alert_in 0.25s ease;
+  min-width: 260px;
+  max-width: 400px;
+}
+
+.custom_alert_success {
+  background-color: #efefef;
+  color: #1a1a1a;
+  border-left: 4px solid #3ecf8e;
+  border-right: 4px solid #3ecf8e;
+}
+
+.custom_alert_error {
+  background-color: #efefef;
+  color: #1a1a1a;
+  border-left: 4px solid #ff4d4d;
+  border-right: 4px solid #ff4d4d;
+}
+
+.custom_alert_message {
+  flex: 1;
+}
+
+.custom_alert_close {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 12px;
+  transition: opacity 0.2s;
+}
+
+.custom_alert_close:hover {
+  opacity: 1;
+}
+
+@keyframes custom_alert_in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

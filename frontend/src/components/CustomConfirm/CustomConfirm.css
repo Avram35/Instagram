@@ -1,0 +1,79 @@
+.custom_confirm_overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: custom_confirm_fade_in 0.2s ease;
+}
+
+.custom_confirm_modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 340px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  animation: custom_confirm_modal_in 0.25s ease;
+}
+
+.custom_confirm_message {
+  font-size: 15px;
+  color: #1a1a1a;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.custom_confirm_actions {
+  display: flex;
+  gap: 10px;
+}
+
+.custom_confirm_btn_cancel,
+.custom_confirm_btn_confirm {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.custom_confirm_btn_cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.custom_confirm_btn_confirm {
+  background: #ff4d4d;
+  color: #fff;
+}
+
+.custom_confirm_btn_cancel:hover,
+.custom_confirm_btn_confirm:hover {
+  opacity: 0.85;
+}
+
+@keyframes custom_confirm_fade_in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes custom_confirm_modal_in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

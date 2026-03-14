@@ -1,0 +1,121 @@
+.edit-profile-div {
+  margin-left: 200px;
+}
+.edit-profile-container {
+  max-width: 500px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.title-edit-profile {
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 30px;
+}
+.edit-image {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ededed;
+  border-radius: 20px;
+  padding: 10px 10px;
+}
+.edit-image img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.change-image-btn {
+  background-color: #405de6;
+  border: none;
+  padding: 8px 20px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.textarea-bio {
+  width: 100%;
+  background-color: #ededed;
+  border-radius: 10px;
+  rows: 2;
+  box-sizing: border-box;
+  resize: none;
+  padding: 10px;
+  margin-top: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.textarea-bio:focus {
+  outline: none;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+}
+.title-bio {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.edit-input {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #ededed;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+.edit-input:focus {
+  outline: none;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+}
+.edit-send-btn {
+  background-color: #405de6;
+  border: none;
+  padding: 10px 50px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  width: fit-content;
+  align-self: end;
+}
+.privacy-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ededed;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.privacy-toggle span {
+  font-size: 14px;
+}
+.input-check-private-profile {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.delete-account-btn {
+  background-color: transparent;
+  border: 1px solid #ed4956;
+  padding: 10px 50px;
+  color: #ed4956;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  width: fit-content;
+  align-self: end;
+  margin-bottom: 30px;
+}
+
+.delete-account-btn:hover {
+  background-color: #ed4956;
+  color: white;
+}

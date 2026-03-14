@@ -1,0 +1,74 @@
+.follower_row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.follower_img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.follower_username {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.follower_username:hover {
+  text-decoration: underline;
+}
+
+.follow_btn {
+  background-color: #0095f6;
+  color: white;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.follow_btn:hover {
+  background-color: #0086e0;
+}
+
+.unfollow_btn {
+  background-color: #efefef;
+  color: black;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.unfollow_btn:hover {
+  background-color: #dbdbdb;
+}
+
+.remove_btn {
+  background-color: #efefef;
+  color: black;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.remove_btn:hover {
+  background-color: #dbdbdb;
+}

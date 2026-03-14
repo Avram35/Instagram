@@ -1,0 +1,66 @@
+.notification_request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+}
+
+.user_img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.notification_text {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+}
+
+.notification_text p {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.notification_text span {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.accept_btn {
+  background-color: #405de6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accept_btn:hover {
+  background-color: #0086e0;
+}
+
+.reject_request {
+  width: 10px;
+  height: 10px;
+  cursor: pointer;
+}
