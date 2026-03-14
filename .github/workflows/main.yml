@@ -54,11 +54,11 @@ jobs:
           chmod +x mvnw
           ./mvnw test
 
-      # - name: Run tests - feed-service
-      #   working-directory: ./services/feed-service
-      #   run: |
-      #     chmod +x mvnw
-      #     ./mvnw test
+      - name: Run tests - feed-service
+        working-directory: ./services/feed-service
+        run: |
+         chmod +x mvnw
+         ./mvnw test
 
       - name: Run tests - post-service
         working-directory: ./services/post-service
@@ -117,12 +117,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/blok-service:${{ steps.tag.outputs.TAG }}
 
-      # - name: Build and push feed-service
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./services/feed-service
-      #     push: true
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/feed-service:${{ steps.tag.outputs.TAG }}
+      - name: Build and push feed-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/feed-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/feed-service:${{ steps.tag.outputs.TAG }}
 
       - name: Build and push post-service
         uses: docker/build-push-action@v5
