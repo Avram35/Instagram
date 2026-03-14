@@ -39,6 +39,11 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public InternalApiKeyFilter internalApiKeyFilter() {
+        return new InternalApiKeyFilter();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
             List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
                                             .map(String::trim)
@@ -71,7 +76,7 @@ public class WebSecurityConfig {
                 // Sve ostalo zahteva JWT
                 .anyRequest().authenticated()
             );
-
+        http.addFilterBefore(internalApiKeyFilter(), UsernamePasswordAuthenticationFilter.class);    
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
