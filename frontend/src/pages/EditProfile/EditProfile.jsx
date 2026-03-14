@@ -62,7 +62,7 @@ const EditProfile = () => {
 
         if (username !== user.username) {
           setAlert({
-            message: "Корисничко ime је промењено. Бићете одјављени!",
+            message: "Корисничко име је промењено. Бићете одјављени!",
             type: "success",
           });
           setTimeout(() => {
@@ -137,7 +137,7 @@ const EditProfile = () => {
         <div className="edit-fname">
           <h3 className="title-bio">Име</h3>
           <input
-            placeholder="Ime"
+            placeholder="Име"
             onChange={(e) => setFname(e.target.value)}
             value={fname}
             className="edit-input"
@@ -153,9 +153,9 @@ const EditProfile = () => {
           />
         </div>
         <div className="edit-username">
-          <h3 className="title-bio">Корисничко ime</h3>
+          <h3 className="title-bio">Корисничко име</h3>
           <input
-            placeholder="Корисничко ime"
+            placeholder="Корисничко име"
             onChange={(e) => setUsername(e.target.value)}
             value={username}
             className="edit-input"
