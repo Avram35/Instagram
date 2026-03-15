@@ -255,8 +255,6 @@ services:
         condition: service_healthy
       follow-service:
         condition: service_healthy
-      post-service:
-        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://interactive_db:${INTERACTIVE_DB_PORT}/${INTERACTIVE_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${INTERACTIVE_DB_USER}

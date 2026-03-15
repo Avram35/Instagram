@@ -67,8 +67,13 @@ cd Instagram
 
 **2. Подесити environment варијабле**
 
+Linux:
 ```bash
 cp .env.example .env
+```
+Windows (Command Prompt):
+```cmd
+copy .env.example .env
 ```
 
 Кључне ствари које треба променити у `.env` за продукцију су подаци о бази и:
